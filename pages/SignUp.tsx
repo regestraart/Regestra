@@ -6,19 +6,27 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Mail, Lock, Palette, Heart } from 'lucide-react';
+import { useUser } from '../context/UserContext';
+import { users } from '../data/mock';
+
+type Role = 'artist' | 'artLover';
 
 export default function SignUp() {
   const navigate = useNavigate();
-  const [role, setRole] = useState<'artist' | 'artLover' | null>(null);
+  const { setCurrentUser } = useUser();
+  const [role, setRole] = useState<Role | null>(null);
 
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
     if (role) {
-      navigate(createPageUrl('EmailVerification'));
+      // Simulate login with the selected role
+      setCurrentUser(users[role]);
+      // In a real app, you'd go to verification. For demo, we go to the home feed.
+      navigate(createPageUrl('HomeSocial'));
     }
   };
 
-  const roleButtonClasses = (selectedRole: 'artist' | 'artLover') => 
+  const roleButtonClasses = (selectedRole: Role) => 
     `flex flex-col items-center justify-center p-6 border-2 rounded-2xl cursor-pointer transition-all duration-200 text-center
     ${role === selectedRole 
       ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200' 

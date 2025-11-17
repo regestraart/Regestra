@@ -6,12 +6,17 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Mail, Lock } from 'lucide-react';
+import { useUser } from '../context/UserContext';
+import { users } from '../data/mock';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { setCurrentUser } = useUser();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    // For demo purposes, log in as the artist by default
+    setCurrentUser(users.artist);
     navigate(createPageUrl('HomeSocial'));
   };
 

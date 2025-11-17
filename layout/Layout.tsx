@@ -1,19 +1,17 @@
 
+
 import React from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { createPageUrl } from "../utils";
 import { Home, Upload, MessageCircle, Search, Bell } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
+import { useUser } from "../context/UserContext";
 
 export default function Layout() {
   const location = useLocation();
-  const isLoggedIn = location.pathname.includes('social') ||
-    location.pathname.includes('upload') ||
-    location.pathname.includes('publish') ||
-    location.pathname.includes('messages') ||
-    location.pathname.includes('profile') ||
-    location.pathname.includes('edit-profile');
+  const { currentUser, switchUserRole } = useUser();
+  const isLoggedIn = !!currentUser;
 
   const isLanding = location.pathname === createPageUrl('Landing');
 
@@ -29,7 +27,7 @@ export default function Layout() {
                 className="h-8"
               />
             </Link>
-            {isLoggedIn ? (
+            {isLoggedIn && currentUser ? (
               <div className="flex items-center gap-6">
                 <div className="relative w-96 hidden md:block">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -38,17 +36,25 @@ export default function Layout() {
                     className="pl-10 bg-gray-50 border-0 rounded-full"
                   />
                 </div>
+                {/* TEMPORARY: Role Switcher for Demo */}
+                <div className="flex items-center gap-2 text-xs border p-1 rounded-md">
+                  <span className="font-semibold hidden sm:inline">Role:</span>
+                  <button onClick={() => switchUserRole('artist')} className={`px-2 py-0.5 rounded ${currentUser.role === 'artist' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}>Artist</button>
+                  <button onClick={() => switchUserRole('artLover')} className={`px-2 py-0.5 rounded ${currentUser.role === 'artLover' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Art Lover</button>
+                </div>
                 <nav className="flex items-center gap-1">
                   <Link to={createPageUrl('HomeSocial')}>
                     <Button variant="ghost" size="icon" className="relative rounded-full">
                       <Home className="w-5 h-5" />
                     </Button>
                   </Link>
-                  <Link to={createPageUrl('Upload')}>
-                    <Button variant="ghost" size="icon" className="rounded-full">
-                      <Upload className="w-5 h-5" />
-                    </Button>
-                  </Link>
+                  {currentUser.role === 'artist' && (
+                    <Link to={createPageUrl('Upload')}>
+                      <Button variant="ghost" size="icon" className="rounded-full">
+                        <Upload className="w-5 h-5" />
+                      </Button>
+                    </Link>
+                  )}
                   <Button variant="ghost" size="icon" className="relative rounded-full">
                     <Bell className="w-5 h-5" />
                     <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-purple-600 rounded-full"></span>
@@ -58,9 +64,9 @@ export default function Layout() {
                       <MessageCircle className="w-5 h-5" />
                     </Button>
                   </Link>
-                  <Link to={createPageUrl('Profile')}>
+                  <Link to={createPageUrl('Profile', { userId: currentUser.id })}>
                     <Button variant="ghost" size="icon" className="rounded-full">
-                      <img src="https://i.pravatar.cc/150?img=1" alt="profile" className="w-8 h-8 rounded-full" />
+                      <img src={currentUser.avatar} alt="profile" className="w-8 h-8 rounded-full" />
                     </Button>
                   </Link>
                 </nav>
