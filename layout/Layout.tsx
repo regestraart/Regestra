@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { createPageUrl } from "../utils";
@@ -67,16 +68,14 @@ export default function Layout() {
             ) : (
               <nav className="flex items-center gap-6">
                 {!isLanding && (
-                  <>
-                    <Link to={createPageUrl('Home')} className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
-                      Explore
-                    </Link>
-                    <Link to={createPageUrl('Login')} className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
-                      Log In
-                    </Link>
-                  </>
+                  <Link to={createPageUrl('Home')} className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                    Explore
+                  </Link>
                 )}
-                <Link to={createPageUrl('Login')}>
+                <Link to={createPageUrl('Login')} className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                  Log In
+                </Link>
+                <Link to={createPageUrl('SignUp')}>
                   <Button className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-full px-6">
                     Sign Up
                   </Button>

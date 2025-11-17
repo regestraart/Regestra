@@ -12,6 +12,7 @@ import Profile from './pages/Profile';
 import EditProfile from './pages/EditProfile';
 import Messages from './pages/Messages';
 import Login from './pages/Login';
+import SignUp from './pages/SignUp';
 import { createPageUrl } from './utils';
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
           <Route path={createPageUrl('EditProfile')} element={<EditProfile />} />
           <Route path={createPageUrl('Messages')} element={<Messages />} />
           <Route path={createPageUrl('Login')} element={<Login />} />
+          <Route path={createPageUrl('SignUp')} element={<SignUp />} />
         </Route>
       </Routes>
     </HashRouter>

@@ -1,5 +1,7 @@
 
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "../utils";
 import { Heart, Bookmark, Share2 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 
@@ -85,10 +87,21 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-gradient-to-r from-purple-600 to-blue-500 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Find Buyers & Browse Art</h1>
-          <p className="text-xl text-purple-100 max-w-2xl">
-            Discover amazing artwork from talented creators around the world
-          </p>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">Find Buyers & Browse Art</h1>
+              <p className="text-xl text-purple-100 max-w-2xl">
+                Discover amazing artwork from talented creators around the world.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <Link to={createPageUrl('SignUp')}>
+                <Button size="lg" className="bg-white text-purple-600 hover:bg-gray-100 rounded-full px-8 py-4 text-lg font-semibold shadow-lg">
+                  Create Free Account
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "../utils";
@@ -37,15 +36,14 @@ export default function Landing() {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to={createPageUrl('Login')}>
+              <Link to={createPageUrl('SignUp')}>
                 <Button size="lg" className="bg-white text-purple-600 hover:bg-gray-100 rounded-full px-8 py-6 text-lg font-semibold shadow-xl">
                   Get Started Free
-                  <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <Link to={createPageUrl('Home')}>
+              <Link to={createPageUrl('Login')}>
                 <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-lg font-semibold">
-                  Explore Artworks
+                  Login
                 </Button>
               </Link>
             </div>
@@ -159,7 +157,7 @@ export default function Landing() {
           <p className="text-xl text-purple-100 mb-10">
             Join thousands of artists who trust Regestra to showcase their creative work
           </p>
-          <Link to={createPageUrl('Login')}>
+          <Link to={createPageUrl('SignUp')}>
             <Button size="lg" className="bg-white text-purple-600 hover:bg-gray-100 rounded-full px-10 py-6 text-lg font-semibold shadow-xl">
               Create Your Free Account
               <ArrowRight className="ml-2 w-5 h-5" />
