@@ -1,4 +1,5 @@
 
+
 export interface User {
   id: string;
   email: string;
@@ -78,7 +79,7 @@ const initialUsers: User[] = [
     contactEmail: 'hello@sarahchen.art',
     socials: { instagram: 'sarahchen.art', twitter: 'sarahchen', behance: 'sarahchen' },
     stats: { artworks: 3, followers: 1234, following: 567 },
-    likedArtworkIds: ['2', '4'],
+    likedArtworkIds: ['2'],
   },
   {
     id: '2',
@@ -180,7 +181,7 @@ export const artworks: Artwork[] = [
     { id: '1', artistId: '1', image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&h=800&fit=crop", title: "Abstract Waves", likes: 234, description: "A vibrant and dynamic abstract piece exploring the motion of ocean waves through a unique color palette.", size: '24" x 36"', tags: ["abstract", "ocean", "colorful"], commentsCount: 12 },
     { id: '2', artistId: '1', image: "https://images.unsplash.com/photo-1582561424760-0b1a93b89431?w=600&h=800&fit=crop", title: "Neon Nights", likes: 321, description: "Inspired by the neon glow of city nights, this piece captures the energy of the urban landscape after dark.", size: '20" x 30"', tags: ["neon", "photography", "urban"], commentsCount: 34 },
     { id: '3', artistId: '1', image: "https://images.unsplash.com/photo-1578301978162-7aae4d755744?w=600&h=800&fit=crop", title: "Digital Harmony", likes: 412, description: "A fusion of organic shapes and digital textures, creating a harmonious visual experience.", size: '36" x 36"', tags: ["digitalart", "abstract", "harmony"], commentsCount: 5 },
-    { id: '4', artistId: '3', image: "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=600&h=800&fit=crop", title: "Urban Dreams", likes: 189, description: "A surreal take on city life, blending architectural elements with dreamlike imagery.", size: '30" x 40"', tags: ["cityscape", "surreal", "digital"], commentsCount: 87 },
+    { id: '4', artistId: '3', image: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=600&h=800&fit=crop", title: "Metropolitan Mirage", likes: 189, description: "A surreal interpretation of city life where reality bends and shifts.", size: '24" x 36"', tags: ["surreal", "urban", "digital"], commentsCount: 8 },
     { id: '5', artistId: '4', image: "https://images.unsplash.com/photo-1583339793403-3d9b001b6008?w=600&h=800&fit=crop", title: "Color Explosion", likes: 456, description: "An explosion of color and texture, created with acrylic on canvas.", size: '48" x 48"', tags: ["acrylic", "painting", "vibrant"], commentsCount: 45 },
     { id: '6', artistId: '5', image: "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=600&h=800&fit=crop", title: "Geometric Flow", likes: 298, description: "A study in shape and form, this digital illustration explores the interplay of geometric patterns.", size: '18" x 24"', tags: ["geometric", "illustration", "minimalist"], commentsCount: 0 },
 ];

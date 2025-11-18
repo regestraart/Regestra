@@ -5,14 +5,35 @@ import { Button } from "../components/ui/Button";
 import { ArrowRight, Sparkles, Users, Palette } from "lucide-react";
 
 export default function Landing() {
-  const artworkSamples = [
-    "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&h=500&fit=crop",
-    "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&h=500&fit=crop",
-    "https://images.unsplash.com/photo-1583339793403-3d9b001b6008?w=400&h=500&fit=crop",
-    "https://images.unsplash.com/photo-1582561424760-0b1a93b89431?w=400&h=500&fit=crop",
-    "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=400&h=500&fit=crop",
-    "https://images.unsplash.com/photo-1578301978162-7aae4d755744?w=400&h=500&fit=crop"
+  // Pool of artistic/abstract image IDs to simulate AI art
+  const artworkIds = [
+    "1579783902614-a3fb3927b6a5", // Abstract Waves
+    "1541961017774-22349e4a1262", // Paint
+    "1583339793403-3d9b001b6008", // Abstract
+    "1582561424760-0b1a93b89431", // Neon
+    "1547891654-e66ed7ebb968",    // Geometric
+    "1578301978162-7aae4d755744", // Digital
+    "1569172194622-6202a391a0a5", // Fluid
+    "1565578255382-f56c2b39003e", // Abstract 2
+    "1580137189272-c9379f8864fd", // Dark abstract
+    "1577720580479-7d839d829c73", // Cube
+    "1550684848-fac1c5b4e853",    // Urban Mirage
+    "1536924940846-227afb31e2a5", // Space
+    "1561214115-f2f134cc4912",    // Dark 2
+    "1618005182384-a83a8bd57fbe", // Cover
+    "1558470598-a5dda9640f6b",    // Paint 2
+    "1563089145-599997674d42",    // Neon 2
+    "1550258987-190a2d41a8ba",    // Fluid 2
+    "1545239351-ef35f4394e4e",    // Geometric 2
+    "1515405295579-ba7f454346a3", // Space 2
+    "1558591714-0320663d6dcd"     // Abstract 3
   ];
+
+  // Generate 100 items by cycling through the ID pool
+  const artworkSamples = Array.from({ length: 100 }).map((_, i) => {
+    const id = artworkIds[i % artworkIds.length];
+    return `https://images.unsplash.com/photo-${id}?w=400&h=500&fit=crop&q=80`;
+  });
 
   return (
     <div className="min-h-screen">
@@ -38,7 +59,7 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link to="/sign-up">
                 <Button size="xl" variant="primary-light" className="rounded-full font-semibold shadow-xl">
-                  Get Started Free
+                  Create Your Free Account
                 </Button>
               </Link>
               <Link to="/login">
@@ -61,7 +82,7 @@ export default function Landing() {
 
       {/* Featured Artworks */}
       <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
               Discover Amazing Art
@@ -71,23 +92,18 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-12">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 mb-12">
             {artworkSamples.map((image, index) => (
               <div 
                 key={index} 
-                className="group relative aspect-[4/5] rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer"
+                className="group relative aspect-[4/5] rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-default"
               >
                 <img 
                   src={image} 
                   alt={`Artwork ${index + 1}`} 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <p className="font-semibold">Artist Name</p>
-                    <p className="text-sm text-gray-200">Artwork Title</p>
-                  </div>
-                </div>
               </div>
             ))}
           </div>
