@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { createPageUrl } from "../utils";
@@ -14,7 +15,8 @@ export default function Layout() {
   const { currentUser, setCurrentUser } = useUser();
   const isLoggedIn = !!currentUser;
   const isLanding = location.pathname === createPageUrl('Landing');
-  const isAuthPage = location.pathname === `/${createPageUrl('Login')}` || location.pathname === `/${createPageUrl('SignUp')}`;
+  const isAuthPage = location.pathname === createPageUrl('Login') || location.pathname === createPageUrl('SignUp');
+  const isHomePage = location.pathname === createPageUrl('Home');
   
   const [showNotifications, setShowNotifications] = useState(false);
   const [hasUnread, setHasUnread] = useState(true);
@@ -49,21 +51,28 @@ export default function Layout() {
     navigate(createPageUrl('Landing'));
   };
 
-  // Explicitly determine the logo's link destination based on login state.
-  const logoLinkDestination = isLoggedIn ? createPageUrl('HomeSocial') : createPageUrl('Landing');
+  const Logo = () => (
+    <img
+      src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/user_691b6257d4173f2ed6ec3e95/7495ad18b_RegestraLogo.png"
+      alt="Regestra"
+      className="h-8"
+    />
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link to={logoLinkDestination} className="flex items-center gap-3">
-              <img
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/user_691b6257d4173f2ed6ec3e95/7495ad18b_RegestraLogo.png"
-                alt="Regestra"
-                className="h-8"
-              />
-            </Link>
+            {isLoggedIn ? (
+              <div className="flex items-center gap-3">
+                <Logo />
+              </div>
+            ) : (
+              <Link to={createPageUrl('Landing')} className="flex items-center gap-3">
+                <Logo />
+              </Link>
+            )}
 
             {isLanding && (
                <nav className="flex items-center gap-2">
@@ -128,9 +137,11 @@ export default function Layout() {
                   </div>
                 ) : (
                   <nav className="flex items-center gap-6">
-                    <Link to={createPageUrl('Home')} className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
-                      Explore
-                    </Link>
+                    {!isHomePage && (
+                        <Link to={createPageUrl('Home')} className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                            Explore
+                        </Link>
+                    )}
                     <Link to={createPageUrl('Login')} className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
                       Log In
                     </Link>
@@ -151,7 +162,7 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      {!isLoggedIn && !isAuthPage && !isLanding && (
+      {!isLoggedIn && !isAuthPage && !isLanding && !isHomePage && (
         <footer className="bg-white border-t border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">

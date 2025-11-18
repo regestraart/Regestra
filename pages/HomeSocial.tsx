@@ -1,25 +1,34 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { artworks as allArtworks, findUserById } from "../data/mock";
 import { createPageUrl } from "../utils";
 import ArtworkDetailModal from "../components/ArtworkDetailModal";
 
-interface PostState {
-  [key: string]: {
-    liked: boolean;
-    bookmarked: boolean;
-  };
-}
-
 export default function HomeSocial() {
-  const [postStates, setPostStates] = useState<PostState>(
-    allArtworks.reduce((acc, art) => ({ ...acc, [art.id]: { liked: art.likes > 400, bookmarked: false } }), {})
-  );
-
   const [selectedArtwork, setSelectedArtwork] = useState(null);
+  const [likedArtworks, setLikedArtworks] = useState<Set<string>>(new Set());
+  const [comment, setComment] = useState('');
+
+  useEffect(() => {
+    const storedLikes = localStorage.getItem('likedArtworks');
+    if (storedLikes) {
+      setLikedArtworks(new Set(JSON.parse(storedLikes)));
+    }
+  }, []);
+
+  const toggleLike = (artworkId: string) => {
+    const newLikedArtworks = new Set(likedArtworks);
+    if (newLikedArtworks.has(artworkId)) {
+      newLikedArtworks.delete(artworkId);
+    } else {
+      newLikedArtworks.add(artworkId);
+    }
+    setLikedArtworks(newLikedArtworks);
+    localStorage.setItem('likedArtworks', JSON.stringify(Array.from(newLikedArtworks)));
+  };
 
   const handleArtworkClick = (artwork) => {
     const artist = findUserById(artwork.artistId);
@@ -28,20 +37,6 @@ export default function HomeSocial() {
 
   const handleCloseModal = () => setSelectedArtwork(null);
 
-  const toggleLike = (postId: string) => {
-    setPostStates(prev => ({
-      ...prev,
-      [postId]: { ...prev[postId], liked: !prev[postId].liked }
-    }));
-  };
-
-  const toggleBookmark = (postId: string) => {
-    setPostStates(prev => ({
-      ...prev,
-      [postId]: { ...prev[postId], bookmarked: !prev[postId].bookmarked }
-    }));
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -49,7 +44,8 @@ export default function HomeSocial() {
           {allArtworks.map((post) => {
             const artist = findUserById(post.artistId);
             if (!artist) return null;
-            const isLiked = postStates[post.id]?.liked;
+            
+            const isLiked = likedArtworks.has(post.id);
             const currentLikes = post.likes + (isLiked ? 1 : 0);
 
             return (
@@ -71,11 +67,18 @@ export default function HomeSocial() {
                   </Button>
                 </div>
 
-                <button className="w-full" onClick={() => handleArtworkClick(post)}>
+                <div 
+                  className="w-full cursor-pointer"
+                  onClick={() => handleArtworkClick(post)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleArtworkClick(post); }}
+                  aria-label={`View details for ${post.title}`}
+                >
                   <div className="relative bg-gray-100">
                     <img src={post.image} alt="Artwork" className="w-full object-cover" style={{ maxHeight: '600px' }} />
                   </div>
-                </button>
+                </div>
 
                 <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
@@ -86,13 +89,7 @@ export default function HomeSocial() {
                       <Button variant="ghost" size="icon" className="rounded-full" onClick={() => handleArtworkClick(post)} aria-label="Comment on post">
                         <MessageCircle className="w-6 h-6 text-gray-700" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="rounded-full" aria-label="Share post">
-                        <Send className="w-6 h-6 text-gray-700" />
-                      </Button>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => toggleBookmark(post.id)} className="rounded-full" aria-label="Bookmark post">
-                      <Bookmark className={`w-6 h-6 transition-colors ${postStates[post.id]?.bookmarked ? 'fill-purple-600 text-purple-600' : 'text-gray-700'}`} />
-                    </Button>
                   </div>
                   <p className="font-semibold text-gray-900">{currentLikes.toLocaleString()} likes</p>
                   <p className="text-gray-900">
@@ -108,9 +105,19 @@ export default function HomeSocial() {
                     <Input 
                       type="text" 
                       placeholder="Add a comment..." 
-                      className="flex-1 h-auto py-2 bg-transparent border-none border-b border-gray-200 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-purple-500 rounded-none px-0" 
+                      className="flex-1 rounded-full"
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
                     />
-                    <button className="text-sm font-semibold text-purple-600 hover:text-purple-700">Post</button>
+                    {comment && (
+                      <Button 
+                        variant="ghost"
+                        className="font-semibold text-purple-600"
+                        onClick={() => setComment('')}
+                      >
+                        Post
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -129,7 +136,7 @@ export default function HomeSocial() {
           artwork={selectedArtwork}
           artist={selectedArtwork.artist}
           onClose={handleCloseModal}
-          isLiked={postStates[selectedArtwork.id]?.liked}
+          isLiked={likedArtworks.has(selectedArtwork.id)}
           onToggleLike={() => toggleLike(selectedArtwork.id)}
         />
       )}

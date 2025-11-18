@@ -17,6 +17,7 @@ export default function Upload() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
+  const [fileError, setFileError] = useState<string | null>(null);
   
   const { isEnhancing, enhancementError, enhancedImage, enhanceImage, resetEnhancement } = useImageEnhancer();
 
@@ -36,6 +37,7 @@ export default function Upload() {
   const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    setFileError(null);
     if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
     } else if (e.type === "dragleave") {
@@ -54,6 +56,7 @@ export default function Upload() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
+    setFileError(null);
     if (e.target.files && e.target.files[0]) {
       handleFile(e.target.files[0]);
     }
@@ -61,12 +64,30 @@ export default function Upload() {
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
+      setFileError("Invalid file type. Please upload an image (JPG, PNG, GIF).");
+      return;
+    }
+
+    const MIN_SIZE_KB = 100;
+    if (file.size < MIN_SIZE_KB * 1024) {
+        setFileError(`Image is too small. Please upload an image larger than ${MIN_SIZE_KB}KB.`);
         return;
     }
+
+    setFileError(null);
     const reader = new FileReader();
     reader.onload = (e) => {
       const originalImage = e.target?.result as string;
-      enhanceImage(originalImage);
+      const img = new Image();
+      img.onload = () => {
+          const MIN_RESOLUTION = 800;
+          if (img.width < MIN_RESOLUTION || img.height < MIN_RESOLUTION) {
+              setFileError(`Image resolution is too low. Please upload an image that is at least ${MIN_RESOLUTION}x${MIN_RESOLUTION} pixels.`);
+              return;
+          }
+          enhanceImage(originalImage);
+      };
+      img.src = originalImage;
     };
     reader.readAsDataURL(file);
   };
@@ -79,6 +100,7 @@ export default function Upload() {
   
   const resetUpload = () => {
     resetEnhancement();
+    setFileError(null);
   }
 
   return (
@@ -123,7 +145,7 @@ export default function Upload() {
                 className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all flex items-center justify-center min-h-[300px] ${
                   dragActive
                     ? 'border-purple-500 bg-purple-50'
-                    : enhancementError 
+                    : (enhancementError || fileError)
                     ? 'border-red-300 bg-red-50'
                     : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
                 }`}
@@ -136,12 +158,12 @@ export default function Upload() {
                     <h3 className="text-xl font-semibold text-gray-900 mt-4">Enhancing your artwork...</h3>
                     <p className="text-gray-600">Please wait, AI is improving your image quality.</p>
                   </div>
-                ) : enhancementError ? (
+                ) : (enhancementError || fileError) ? (
                   <div className="text-red-700">
                     <AlertTriangle className="w-12 h-12 mx-auto text-red-500" />
-                    <h3 className="text-xl font-semibold mt-4">Enhancement Failed</h3>
-                    <p className="text-gray-600 mb-6">{enhancementError}</p>
-                    <Button type="button" variant="outline" onClick={() => document.getElementById('file-upload')?.click()} className="rounded-full">
+                    <h3 className="text-xl font-semibold mt-4">Upload Failed</h3>
+                    <p className="text-gray-600 mb-6">{enhancementError || fileError}</p>
+                    <Button type="button" variant="outline" onClick={() => { resetUpload(); document.getElementById('file-upload')?.click(); }} className="rounded-full">
                       Try Another Image
                     </Button>
                   </div>

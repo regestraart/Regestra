@@ -1,19 +1,25 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { X, Heart, MessageCircle, Send, Bookmark } from 'lucide-react';
+import { X, Heart, MessageCircle, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
-import { User, Artwork } from '../data/mock';
+import { User, Artwork, CollectionArtwork } from '../data/mock';
 import { createPageUrl } from '../utils';
 
+// FIX: Change ModalArtwork to be a union type, which is more flexible and fixes assignability issues.
+type ModalArtwork = Artwork | CollectionArtwork;
+
 interface ArtworkDetailModalProps {
-  artwork: Artwork & { likes: number }; // Ensure likes is a number
-  artist: User;
+  artwork: ModalArtwork;
+  artist: Partial<User> & { name: string };
   onClose: () => void;
   isLiked: boolean;
   onToggleLike: () => void;
+  onDelete?: (artworkId: string) => void;
 }
 
-const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist, onClose, isLiked, onToggleLike }) => {
+const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist, onClose, isLiked, onToggleLike, onDelete }) => {
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -30,7 +36,15 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
 
   if (!artwork || !artist) return null;
   
-  const currentLikes = artwork.likes + (isLiked ? 1 : 0);
+  const currentLikes = (('likes' in artwork && artwork.likes) || 0) + (isLiked ? 1 : 0);
+
+  const handleDeleteClick = () => {
+    if (onDelete) {
+        onDelete(artwork.id);
+    }
+  };
+
+  const isPlatformArtwork = 'artistId' in artwork;
 
   return (
     <div 
@@ -51,13 +65,26 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
 
         <div className="w-full md:w-2/5 flex flex-col p-6 overflow-y-auto">
           <div className="flex items-start justify-between mb-4 flex-shrink-0">
-            <Link to={createPageUrl('Profile', { userId: artist.id })} className="flex items-center gap-3 group" onClick={onClose}>
-              <img src={artist.avatar} alt={artist.name} className="w-12 h-12 rounded-full" />
-              <div>
-                <p className="font-bold text-gray-900 group-hover:underline">{artist.name}</p>
-                <p className="text-sm text-gray-500">@{artist.username}</p>
-              </div>
-            </Link>
+            {isPlatformArtwork && artist.id ? (
+              <Link to={createPageUrl('Profile', { userId: artist.id })} className="flex items-center gap-3 group" onClick={onClose}>
+                <img src={artist.avatar} alt={artist.name} className="w-12 h-12 rounded-full" />
+                <div>
+                  <p className="font-bold text-gray-900 group-hover:underline">{artist.name}</p>
+                  <p className="text-sm text-gray-500">@{artist.username}</p>
+                </div>
+              </Link>
+            ) : (
+                 <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-500 text-xl">
+                        {artist.name.charAt(0)}
+                    </div>
+                    <div>
+                        {/* FIX: Use artist.name from props for consistency, as it's already correctly determined in the parent component. */}
+                        <p className="font-bold text-gray-900">{artist.name}</p>
+                        <p className="text-sm text-gray-500">From personal collection</p>
+                    </div>
+                </div>
+            )}
             <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full -mr-2" aria-label="Close modal">
               <X className="w-5 h-5 text-gray-500" />
             </Button>
@@ -66,18 +93,18 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
           <div className="flex-grow">
             <h2 className="text-3xl font-bold text-gray-900 mb-3">{artwork.title}</h2>
             
-            {artwork.description && (
+            {'description' in artwork && artwork.description && (
               <p className="text-gray-700 mb-6">{artwork.description}</p>
             )}
             
             <div className="space-y-3 text-sm text-gray-600 mb-6 border-y border-gray-200 py-4">
-              {artwork.size && (
+              {'size' in artwork && artwork.size && (
                 <div className="flex">
                   <span className="font-semibold text-gray-800 w-24 flex-shrink-0">Size</span>
                   <span>{artwork.size}</span>
                 </div>
               )}
-              {artwork.tags && artwork.tags.length > 0 && (
+              {'tags' in artwork && artwork.tags && artwork.tags.length > 0 && (
                 <div className="flex">
                   <span className="font-semibold text-gray-800 w-24 flex-shrink-0">Tags</span>
                   <div className="flex flex-wrap gap-2">
@@ -110,7 +137,6 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
                     </div>
                 </div>
             </div>
-
           </div>
 
           <div className="flex-shrink-0 space-y-4 pt-4 border-t border-gray-200">
@@ -122,13 +148,22 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
                 <Button variant="ghost" size="icon" className="rounded-full" aria-label="Comment on artwork">
                   <MessageCircle className="w-6 h-6 text-gray-700" />
                 </Button>
-                <Button variant="ghost" size="icon" className="rounded-full" aria-label="Share artwork">
-                  <Send className="w-6 h-6 text-gray-700" />
-                </Button>
               </div>
-              <Button variant="ghost" size="icon" className="rounded-full" aria-label="Bookmark artwork">
-                <Bookmark className="w-6 h-6 text-gray-700" />
-              </Button>
+              {onDelete && (
+                <div>
+                  {!showConfirmDelete ? (
+                    <Button variant="ghost" size="icon" className="rounded-full text-gray-500 hover:bg-red-50 hover:text-red-600" onClick={() => setShowConfirmDelete(true)} aria-label="Delete artwork">
+                      <Trash2 className="w-5 h-5" />
+                    </Button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-700">Are you sure?</span>
+                      <Button variant="ghost" size="sm" onClick={() => setShowConfirmDelete(false)}>Cancel</Button>
+                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDeleteClick}>Delete</Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
              <p className="font-semibold text-gray-900 text-sm">
                 {currentLikes.toLocaleString()} likes

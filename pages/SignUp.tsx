@@ -5,7 +5,7 @@ import { createPageUrl } from '../utils';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
-import { Mail, Lock, Palette, Heart, User as UserIcon, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, Palette, Heart, User as UserIcon, ArrowLeft, LoaderCircle } from 'lucide-react';
 import { useUser } from '../context/UserContext';
 import { users } from '../data/mock';
 
@@ -16,6 +16,9 @@ export default function SignUp() {
   const { setCurrentUser } = useUser();
   const [step, setStep] = useState(1);
   const [role, setRole] = useState<Role | null>(null);
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
 
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,9 +30,12 @@ export default function SignUp() {
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
     if (role) {
-      // Simulate login with the selected role
-      setCurrentUser(users[role]);
-      navigate(createPageUrl('HomeSocial'));
+      setIsSigningUp(true);
+      // Simulate API call
+      setTimeout(() => {
+        setCurrentUser(users[role]);
+        navigate(createPageUrl('HomeSocial'));
+      }, 1000);
     }
   };
 
@@ -80,15 +86,17 @@ export default function SignUp() {
             <form onSubmit={handleSignUp} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
-                <div className="relative"><UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input id="fullName" type="text" placeholder="Your full name" required className="pl-10 h-12 rounded-xl" /></div>
+                <div className="relative"><UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input id="fullName" type="text" placeholder="Your full name" required className="pl-10 h-12 rounded-xl" value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
-                <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">@</span><Input id="username" type="text" placeholder="your_username" required className="pl-8 h-12 rounded-xl" /></div>
+                <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">@</span><Input id="username" type="text" placeholder="your_username" required className="pl-8 h-12 rounded-xl" value={username} onChange={(e) => setUsername(e.target.value)} /></div>
               </div>
               <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
-                 <Button type="button" variant="ghost" onClick={() => setStep(1)} className="text-gray-600"><ArrowLeft className="w-4 h-4 mr-2"/> Back</Button>
-                 <Button type="submit" className="w-full sm:w-auto h-12 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-xl font-semibold">Create Account</Button>
+                 <Button type="button" variant="ghost" onClick={() => setStep(1)} className="text-gray-600" disabled={isSigningUp}><ArrowLeft className="w-4 h-4 mr-2"/> Back</Button>
+                 <Button type="submit" className="w-full sm:w-auto h-12 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-xl font-semibold" disabled={isSigningUp}>
+                  {isSigningUp ? <LoaderCircle className="w-5 h-5 animate-spin" /> : "Create Account"}
+                 </Button>
               </div>
             </form>
           )}

@@ -1,36 +1,41 @@
-
-
 import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { createPageUrl } from "../utils";
 import { Button } from "../components/ui/Button";
-import { Settings, Share2, MapPin, Link as LinkIcon, Calendar, Heart, Upload, Instagram, Twitter, Mail } from "lucide-react";
+import { Settings, Share2, MapPin, Link as LinkIcon, Calendar, Heart, Upload, Instagram, Twitter, Mail, Plus } from "lucide-react";
 import ArtworkDetailModal from "../components/ArtworkDetailModal";
+import AddToCollectionModal from "../components/AddToCollectionModal";
 import { useUser } from "../context/UserContext";
-import { findUserById, findArtworksByArtistId, User, artworks as allArtworks } from "../data/mock";
+import { findUserById, findArtworksByArtistId, User, Artwork, artworks as allArtworks, CollectionArtwork, findCollectionArtworksByUserId } from "../data/mock";
 
-const BehanceIcon = (props) => (
+const BehanceIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
     <path d="M7.938 10.148h3.324c0-1.854-1.48-1.854-3.324-1.854zm12.562 1.332c0-1.782-1.337-3.159-3.417-3.159H9.412V2.83h7.94c1.854 0 2.923 1.02 2.923 2.538h-2.923c0-.865-.63-1.02-1.289-1.02H11.5v3.13h5.717c1.94 0 3.295 1.164 3.295 3.015 0 1.996-1.508 3.102-3.417 3.102h-5.6v5.253h5.542c2.163 0 3.53-.992 3.53-2.997H17.27c0 .942-.717 1.39-1.684 1.39h-3.13V15.7h5.366c2.05 0 3.446-1.193 3.446-3.22zM8.562 18.168h-5.04V6.832h5.04c2.51 0 4.218 1.536 4.218 3.668 0 2.22-1.737 3.668-4.218 3.668zM3 21.168h6.19c3.96 0 6.72-2.135 6.72-6.192C15.91 10.95 13.12 9 9.19 9H3v12.168z" />
   </svg>
 );
 
+type SelectedArtwork = (Artwork | CollectionArtwork) & { artist?: User };
+
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const { currentUser } = useUser();
   const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [userArtworks, setUserArtworks] = useState<Artwork[]>([]);
+  const [userCollections, setUserCollections] = useState<CollectionArtwork[]>([]);
   const [activeTab, setActiveTab] = useState('artworks');
-  const [selectedArtwork, setSelectedArtwork] = useState(null);
+  const [selectedArtwork, setSelectedArtwork] = useState<SelectedArtwork | null>(null);
   const [likedArtworks, setLikedArtworks] = useState<Set<string>>(new Set());
+  const [showAddToCollection, setShowAddToCollection] = useState(false);
 
   useEffect(() => {
     const user = findUserById(userId);
     setProfileUser(user);
-    // Set initial tab based on role
-    if (user?.role === 'artLover') {
-      setActiveTab('liked');
-    } else {
+    if (user?.role === 'artist') {
+      setUserArtworks(findArtworksByArtistId(user.id));
       setActiveTab('artworks');
+    } else if (user?.role === 'artLover') {
+      setUserCollections(findCollectionArtworksByUserId(user.id));
+      setActiveTab('collections');
     }
   }, [userId]);
 
@@ -52,6 +57,21 @@ export default function Profile() {
     localStorage.setItem('likedArtworks', JSON.stringify(Array.from(newLikedArtworks)));
   };
 
+  const handleCloseModal = () => setSelectedArtwork(null);
+
+  const handleDeleteArtwork = (artworkId: string) => {
+    if (profileUser?.role === 'artist') {
+        setUserArtworks(currentArtworks => currentArtworks.filter(art => art.id !== artworkId));
+    } else if (profileUser?.role === 'artLover') {
+        setUserCollections(currentCollections => currentCollections.filter(art => art.id !== artworkId));
+    }
+    handleCloseModal();
+  };
+  
+  const handleAddArtwork = (newArtwork: CollectionArtwork) => {
+    setUserCollections(prev => [newArtwork, ...prev]);
+    setShowAddToCollection(false);
+  };
 
   if (!profileUser) {
     return <div>User not found or loading...</div>;
@@ -60,111 +80,129 @@ export default function Profile() {
   const isOwnProfile = currentUser?.id === profileUser.id;
   const isArtist = profileUser.role === 'artist';
 
-  const userArtworks = isArtist ? findArtworksByArtistId(profileUser.id) : [];
-  
-  // FIX: Differentiate between profile user's likes and current user's likes.
-  // For demo, we'll create a mock set of likes for the profile user.
   const getProfileUserLikedArtworks = () => {
-    // If it's our own profile, show our actual likes.
-    if (isOwnProfile) {
-        return allArtworks.filter(art => likedArtworks.has(art.id));
-    }
-    // For other users, create a stable, mock "liked" list for demonstration.
-    // E.g., The art lover likes the first and third artwork.
-    if (profileUser.role === 'artLover') {
-        const likedIds = [allArtworks[0].id, allArtworks[2].id];
-        return allArtworks.filter(art => likedIds.includes(art.id));
+    if (profileUser.likedArtworkIds) {
+        return allArtworks.filter(art => profileUser.likedArtworkIds!.includes(art.id));
     }
     return [];
   }
   
-  let gridContent = [];
+  let gridContent: (Artwork | CollectionArtwork)[] = [];
   if (isArtist && activeTab === 'artworks') {
     gridContent = userArtworks;
+  } else if (activeTab === 'collections') {
+    if(isArtist){
+      // Artists don't have personal collections in this mock data structure
+       gridContent = [];
+    } else {
+      gridContent = userCollections;
+    }
   } else if (activeTab === 'liked') {
     gridContent = getProfileUserLikedArtworks();
   }
 
-  const handleArtworkClick = (artwork) => {
-    const artist = findUserById(artwork.artistId);
+  const handleArtworkClick = (artwork: Artwork | CollectionArtwork) => {
+    let artist: User | undefined;
+    if ('artistId' in artwork) {
+        artist = findUserById(artwork.artistId);
+    }
     setSelectedArtwork({ ...artwork, artist });
   };
+  
+  const getDeleteHandler = (artwork: Artwork | CollectionArtwork) => {
+    if (!isOwnProfile) return undefined;
+    if (isArtist && 'artistId' in artwork) return handleDeleteArtwork;
+    if (!isArtist && !('artistId' in artwork)) return handleDeleteArtwork;
+    return undefined;
+  }
 
-  const handleCloseModal = () => {
-    setSelectedArtwork(null);
-  };
-
-  const artistTabs = ['Artworks', 'Liked', 'Collections'];
-  const artLoverTabs = ['Liked', 'Collections'];
+  const artistTabs = ['Artworks', 'Liked']; // Simplified for now
+  const artLoverTabs = ['Collections', 'Liked'];
   const tabs = isArtist ? artistTabs : artLoverTabs;
+  
+  const likedArtForMosaic = getProfileUserLikedArtworks().slice(0, 4);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="relative h-64 md:h-80 bg-gray-200">
-        {isArtist && profileUser.coverImage && (
-          <img src={profileUser.coverImage} alt="Cover" className="w-full h-full object-cover" />
-        )}
-      </div>
-
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative -mt-20 mb-8">
-          <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8">
-            <div className="flex flex-col md:flex-row items-start gap-6">
-              <div className="relative -mt-24 flex-shrink-0">
-                <img src={profileUser.avatar} alt={profileUser.name} className="w-32 h-32 rounded-3xl border-4 border-white shadow-lg" />
-              </div>
-
-              <div className="flex-1 w-full">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-1">{profileUser.name}</h1>
-                    <p className="text-gray-600">@{profileUser.username}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {isOwnProfile ? (
-                      <Link to={createPageUrl('EditProfile')}>
-                        <Button variant="outline" className="rounded-full"><Settings className="w-4 h-4 mr-2" /> Edit Profile</Button>
-                      </Link>
-                    ) : (
-                      <Button className="rounded-full">Follow</Button>
-                    )}
-                    <Button variant="outline" className="rounded-full"><Share2 className="w-4 h-4 mr-2" /> Share</Button>
-                  </div>
-                </div>
-                <p className="text-gray-700 mb-4 max-w-2xl">{profileUser.bio}</p>
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-600">
-                  {profileUser.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4" /><span>{profileUser.location}</span></div>}
-                  {isArtist && profileUser.website && <div className="flex items-center gap-1"><LinkIcon className="w-4 h-4" /><a href={`http://${profileUser.website}`} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">{profileUser.website}</a></div>}
-                  <div className="flex items-center gap-1"><Calendar className="w-4 h-4" /><span>Joined {profileUser.joinDate}</span></div>
-                </div>
-                 {isArtist && profileUser.socials && (
-                    <div className="flex items-center gap-4 mt-4">
-                        {profileUser.socials.instagram && <a href="#" className="text-gray-500 hover:text-gray-800"><Instagram className="w-5 h-5" /></a>}
-                        {profileUser.socials.twitter && <a href="#" className="text-gray-500 hover:text-gray-800"><Twitter className="w-5 h-5" /></a>}
-                        {profileUser.socials.behance && <a href="#" className="text-gray-500 hover:text-gray-800"><BehanceIcon className="w-5 h-5" /></a>}
-                        {profileUser.contactEmail && <a href={`mailto:${profileUser.contactEmail}`} className="text-gray-500 hover:text-gray-800"><Mail className="w-5 h-5" /></a>}
+      <div className="relative">
+        <div className="h-64 md:h-80 bg-gray-200">
+          {profileUser.coverImage ? (
+            <img src={profileUser.coverImage} alt="Cover" className="w-full h-full object-cover" />
+          ) : !isArtist ? (
+            <div className="w-full h-full grid grid-cols-2 md:grid-cols-4 gap-0.5">
+                {likedArtForMosaic.map(art => (
+                    <div key={art.id} className="overflow-hidden h-full">
+                        <img src={art.image} alt={art.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                     </div>
-                )}
-              </div>
+                ))}
+                {Array(4 - likedArtForMosaic.length).fill(0).map((_, i) => <div key={i} className="bg-gradient-to-br from-purple-50 to-blue-50"></div>)}
             </div>
-
-            <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200 flex-wrap gap-4">
-                <div className="flex items-center gap-8">
-                    {isArtist && <div><p className="text-2xl font-bold text-gray-900">{profileUser.stats.artworks || 0}</p><p className="text-sm text-gray-600">Artworks</p></div>}
-                    {!isArtist && <div><p className="text-2xl font-bold text-gray-900">{profileUser.stats.liked || 0}</p><p className="text-sm text-gray-600">Liked</p></div>}
-                    {!isArtist && <div><p className="text-2xl font-bold text-gray-900">{profileUser.stats.collections || 0}</p><p className="text-sm text-gray-600">Collections</p></div>}
-                    <div><p className="text-2xl font-bold text-gray-900">{profileUser.stats.followers?.toLocaleString() || 0}</p><p className="text-sm text-gray-600">Followers</p></div>
-                    <div><p className="text-2xl font-bold text-gray-900">{profileUser.stats.following}</p><p className="text-sm text-gray-600">Following</p></div>
-                </div>
-                {isArtist && profileUser.commissionStatus && profileUser.commissionStatus !== 'Not Available' && (
-                    <div className={`text-sm font-semibold px-4 py-2 rounded-full ${profileUser.commissionStatus === 'Open' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {profileUser.commissionStatus} for Commissions
-                    </div>
-                )}
-            </div>
-          </div>
+          ) : <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100"></div>}
         </div>
-        
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="relative -mt-20 mb-8">
+              <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8">
+                <div className="flex flex-col md:flex-row items-start gap-6">
+                  <div className="relative -mt-24 flex-shrink-0">
+                    <img src={profileUser.avatar} alt={profileUser.name} className="w-32 h-32 rounded-3xl border-4 border-white shadow-lg" />
+                  </div>
+
+                  <div className="flex-1 w-full">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                      <div>
+                        <h1 className="text-3xl font-bold text-gray-900 mb-1">{profileUser.name}</h1>
+                        <p className="text-gray-600">@{profileUser.username}</p>
+                         {!isArtist && <p className="text-sm font-semibold text-purple-600 mt-1">Art Enthusiast</p>}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {isOwnProfile ? (
+                          <Link to={createPageUrl('EditProfile')}>
+                            <Button variant="outline" className="rounded-full"><Settings className="w-4 h-4 mr-2" /> Edit Profile</Button>
+                          </Link>
+                        ) : (
+                          <Button className="rounded-full">Follow</Button>
+                        )}
+                        <Button variant="outline" className="rounded-full"><Share2 className="w-4 h-4 mr-2" /> Share</Button>
+                      </div>
+                    </div>
+                    <p className="text-gray-700 mb-4 max-w-2xl">{profileUser.bio}</p>
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-600">
+                      {profileUser.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4" /><span>{profileUser.location}</span></div>}
+                      {isArtist && profileUser.website && <div className="flex items-center gap-1"><LinkIcon className="w-4 h-4" /><a href={`http://${profileUser.website}`} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">{profileUser.website}</a></div>}
+                      <div className="flex items-center gap-1"><Calendar className="w-4 h-4" /><span>Joined {profileUser.joinDate}</span></div>
+                    </div>
+                     {isArtist && profileUser.socials && (
+                        <div className="flex items-center gap-4 mt-4">
+                            {profileUser.socials.instagram && <a href="#" className="text-gray-500 hover:text-gray-800"><Instagram className="w-5 h-5" /></a>}
+                            {profileUser.socials.twitter && <a href="#" className="text-gray-500 hover:text-gray-800"><Twitter className="w-5 h-5" /></a>}
+                            {profileUser.socials.behance && <a href="#" className="text-gray-500 hover:text-gray-800"><BehanceIcon className="w-5 h-5" /></a>}
+                            {profileUser.contactEmail && <a href={`mailto:${profileUser.contactEmail}`} className="text-gray-500 hover:text-gray-800"><Mail className="w-5 h-5" /></a>}
+                        </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200 flex-wrap gap-4">
+                    <div className="flex items-center gap-8">
+                        {isArtist && <div><p className="text-2xl font-bold text-gray-900">{userArtworks.length}</p><p className="text-sm text-gray-600">Artworks</p></div>}
+                        {!isArtist && <div><p className="text-2xl font-bold text-gray-900">{userCollections.length}</p><p className="text-sm text-gray-600">Collections</p></div>}
+                        {!isArtist && <div><p className="text-2xl font-bold text-gray-900">{getProfileUserLikedArtworks().length}</p><p className="text-sm text-gray-600">Liked</p></div>}
+                        <div><p className="text-2xl font-bold text-gray-900">{profileUser.stats.followers?.toLocaleString() || 0}</p><p className="text-sm text-gray-600">Followers</p></div>
+                        <div><p className="text-2xl font-bold text-gray-900">{profileUser.stats.following}</p><p className="text-sm text-gray-600">Following</p></div>
+                    </div>
+                    {isArtist && profileUser.commissionStatus && profileUser.commissionStatus !== 'Not Available' && (
+                        <div className={`text-sm font-semibold px-4 py-2 rounded-full ${profileUser.commissionStatus === 'Open' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {profileUser.commissionStatus} for Commissions
+                        </div>
+                    )}
+                </div>
+              </div>
+            </div>
+        </div>
+      </div>
+      
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-2xl shadow-sm mb-6 overflow-hidden">
           <div className="flex items-center justify-between px-6 border-b border-gray-200">
             <div className="flex items-center gap-8">
@@ -174,10 +212,15 @@ export default function Profile() {
                   </button>
                 ))}
             </div>
-            {isOwnProfile && isArtist && (
-              <Link to={createPageUrl('Upload')}>
-                  <Button><Upload className="w-4 h-4 mr-2" /> Upload Artwork</Button>
-              </Link>
+             {isOwnProfile && isArtist && (
+                <Link to={createPageUrl('Upload')}>
+                    <Button><Upload className="w-4 h-4 mr-2" /> Upload Artwork</Button>
+                </Link>
+            )}
+             {isOwnProfile && !isArtist && activeTab === 'collections' && (
+                <Button onClick={() => setShowAddToCollection(true)}>
+                    <Plus className="w-4 h-4 mr-2" /> Add Artwork
+                </Button>
             )}
           </div>
         </div>
@@ -191,7 +234,7 @@ export default function Profile() {
                   <h3 className="font-semibold mb-1 line-clamp-1">{artwork.title}</h3>
                   <div className="flex items-center gap-1 text-sm">
                     <Heart className="w-4 h-4" />
-                    <span>{artwork.likes + (likedArtworks.has(artwork.id) ? 1 : 0)}</span>
+                    <span>{('likes' in artwork && artwork.likes) || 0}</span>
                   </div>
                 </div>
               </div>
@@ -209,10 +252,21 @@ export default function Profile() {
       {selectedArtwork && (
         <ArtworkDetailModal 
           artwork={selectedArtwork}
-          artist={selectedArtwork.artist}
+          artist={
+            'artistId' in selectedArtwork && selectedArtwork.artist
+              ? selectedArtwork.artist
+              : { name: 'artistName' in selectedArtwork ? selectedArtwork.artistName : 'Unknown Artist' }
+          }
           onClose={handleCloseModal}
           isLiked={likedArtworks.has(selectedArtwork.id)}
           onToggleLike={() => toggleLike(selectedArtwork.id)}
+          onDelete={getDeleteHandler(selectedArtwork)}
+        />
+      )}
+      {showAddToCollection && (
+        <AddToCollectionModal 
+            onClose={() => setShowAddToCollection(false)}
+            onAddArtwork={handleAddArtwork}
         />
       )}
     </div>

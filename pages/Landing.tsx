@@ -34,6 +34,7 @@ export default function Landing() {
             <p className="text-xl md:text-2xl text-purple-100 mb-10 max-w-2xl mx-auto">
               Join thousands of artists sharing their work, building their portfolio, and connecting with a vibrant creative community.
             </p>
+            
           </div>
         </div>
 
@@ -145,7 +146,7 @@ export default function Landing() {
             Join thousands of artists who trust Regestra to showcase their creative work
           </p>
           <Link to={createPageUrl('SignUp')}>
-            <Button size="xl" variant="primary-light" className="rounded-full">
+            <Button size="xl" variant="primary-light" className="rounded-full font-semibold shadow-xl">
               Create Your Free Account
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>

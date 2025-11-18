@@ -1,23 +1,28 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, LoaderCircle } from 'lucide-react';
 import { useUser } from '../context/UserContext';
 import { users } from '../data/mock';
 
 export default function Login() {
   const navigate = useNavigate();
   const { setCurrentUser } = useUser();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // For demo purposes, log in as the artist by default
-    setCurrentUser(users.artist);
-    navigate(createPageUrl('HomeSocial'));
+    setIsLoading(true);
+    // Simulate API call
+    setTimeout(() => {
+      // For demo purposes, log in as the artist by default
+      setCurrentUser(users.artist);
+      navigate(createPageUrl('HomeSocial'));
+    }, 1000);
   };
 
   return (
@@ -53,8 +58,8 @@ export default function Login() {
               </div>
             </div>
             
-            <Button type="submit" className="w-full h-12 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-xl font-semibold">
-              Log In
+            <Button type="submit" className="w-full h-12 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-xl font-semibold" disabled={isLoading}>
+              {isLoading ? <LoaderCircle className="w-5 h-5 animate-spin" /> : 'Log In'}
             </Button>
           </form>
         </div>

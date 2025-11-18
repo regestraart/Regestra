@@ -10,9 +10,8 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: PropsWithChildren) => {
-  // Default to the artist user being logged in for demonstration purposes.
   // In a real app, this would be null initially and set after login.
-  const [currentUser, setCurrentUser] = useState<User | null>(users.artist);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   return (
     <UserContext.Provider value={{ currentUser, setCurrentUser }}>

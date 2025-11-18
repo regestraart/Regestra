@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Heart, MessageCircle, UserPlus } from 'lucide-react';
 
@@ -79,11 +78,6 @@ const NotificationsPopover = () => {
             <p className="text-sm">You're all caught up!</p>
           </div>
         )}
-      </div>
-      <div className="p-2 bg-gray-50 text-center border-t border-gray-200">
-        <button className="text-sm font-semibold text-purple-600 hover:text-purple-800">
-          View all notifications
-        </button>
       </div>
     </div>
   );

@@ -27,7 +27,7 @@ const Button: React.FC<ButtonProps> = ({
     sm: 'h-9 px-3',
     lg: 'h-11 px-8',
     icon: 'h-10 w-10',
-    xl: 'h-auto px-8 py-4 text-lg font-semibold shadow-xl',
+    xl: 'h-auto px-8 py-4 text-lg',
   };
 
   return (

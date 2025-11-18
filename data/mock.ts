@@ -24,6 +24,8 @@ export interface User {
     collections?: number;
     liked?: number;
   };
+  likedArtworkIds?: string[];
+  collections?: Collection[];
 }
 
 export interface Artwork {
@@ -35,6 +37,23 @@ export interface Artwork {
   description: string;
   size: string;
   tags: string[];
+}
+
+export interface CollectionArtwork {
+    id: string;
+    image: string;
+    title: string;
+    artistName: string;
+    likes?: number;
+    description?: string;
+    size?: string;
+    tags?: string[];
+}
+
+export interface Collection {
+    id: string;
+    name: string;
+    artworks: CollectionArtwork[];
 }
 
 const dbUsers: User[] = [
@@ -52,7 +71,8 @@ const dbUsers: User[] = [
     commissionStatus: 'Open',
     contactEmail: 'hello@sarahchen.art',
     socials: { instagram: 'sarahchen.art', twitter: 'sarahchen', behance: 'sarahchen' },
-    stats: { artworks: 3, followers: 1234, following: 567 }
+    stats: { artworks: 3, followers: 1234, following: 567 },
+    likedArtworkIds: ['2', '4'],
   },
   {
     id: '2',
@@ -60,10 +80,26 @@ const dbUsers: User[] = [
     name: "Alex Johnson",
     username: "alexj",
     avatar: "https://i.pravatar.cc/300?img=11",
+    coverImage: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200&h=300&fit=crop",
     bio: "Lover of all things abstract and colorful. Building my personal collection one piece at a time.",
     location: "New York, NY",
     joinDate: "March 2023",
-    stats: { liked: 152, collections: 12, following: 89 }
+    stats: { liked: 152, collections: 1, following: 89 },
+    likedArtworkIds: ['1', '5', '6'],
+    collections: [
+        {
+            id: 'col1',
+            name: 'Main Collection',
+            artworks: [
+                {
+                    id: 'c1',
+                    image: 'https://images.unsplash.com/photo-1536924940846-227afb31e2a5?w=600&h=800&fit=crop',
+                    title: 'Galaxy Rising',
+                    artistName: 'Unknown Artist'
+                }
+            ]
+        }
+    ]
   },
   {
     id: '3',
@@ -116,7 +152,7 @@ export const artworks: Artwork[] = [
     { 
       id: '2', 
       artistId: '1',
-      image: "https://images.unsplash.com/photo-1582561424760-0b1a-93b89431?w=600&h=800&fit=crop", 
+      image: "https://images.unsplash.com/photo-1582561424760-0b1a93b89431?w=600&h=800&fit=crop", 
       title: "Neon Nights", 
       likes: 321,
       description: "Inspired by the neon glow of city nights, this piece captures the energy of the urban landscape after dark.",
@@ -175,3 +211,11 @@ export const findArtworksByArtistId = (artistId: string | undefined): Artwork[] 
   if (!artistId) return [];
   return artworks.filter(artwork => artwork.artistId === artistId);
 }
+
+export const findCollectionArtworksByUserId = (userId: string | undefined): CollectionArtwork[] => {
+    const user = findUserById(userId);
+    if (user && user.collections && user.collections.length > 0) {
+        return user.collections.flatMap(c => c.artworks);
+    }
+    return [];
+};
