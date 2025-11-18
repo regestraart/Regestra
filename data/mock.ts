@@ -245,8 +245,8 @@ const generateArtworks = (): Artwork[] => {
     
     generated.push(...manualArtworks);
 
-    // Generate the rest to reach 200 total
-    for (let i = generated.length; i < 200; i++) {
+    // Generate the rest to reach 300 total
+    for (let i = generated.length; i < 300; i++) {
         const randomId = artworkIds[Math.floor(Math.random() * artworkIds.length)];
         const artistId = (Math.floor(Math.random() * 5) + 1).toString(); // Random artist 1-5
         const numTags = Math.floor(Math.random() * 3) + 1;
@@ -456,4 +456,3 @@ export const startConversation = (userId1: string, userId2: string): string => {
     }
     return conv.id;
 };
-

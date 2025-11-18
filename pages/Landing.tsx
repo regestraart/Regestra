@@ -1,4 +1,5 @@
 
+
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
@@ -11,15 +12,17 @@ const ArtworkSample = ({ image, index }: { image: string; index: number }) => {
 
   return (
     <div 
-      className="group relative aspect-[4/5] rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-default"
+      className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
     >
-      <img 
-        src={image} 
-        alt={`Artwork ${index + 1}`} 
-        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        loading="lazy"
-        onError={() => setHasError(true)}
-      />
+      <div className="relative aspect-[3/4] overflow-hidden bg-gray-100">
+        <img 
+          src={image} 
+          alt={`Artwork ${index + 1}`} 
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          loading="lazy"
+          onError={() => setHasError(true)}
+        />
+      </div>
     </div>
   );
 };
@@ -49,10 +52,13 @@ export default function Landing() {
     "1558591714-0320663d6dcd"     // Abstract 3
   ];
 
-  // Generate 100 items by cycling through the ID pool
-  const artworkSamples = Array.from({ length: 100 }).map((_, i) => {
-    const id = artworkIds[i % artworkIds.length];
-    return `https://images.unsplash.com/photo-${id}?w=400&h=500&fit=crop&q=80`;
+  // Generate 30 items by randomly selecting from the ID pool on mount
+  const [artworkSamples] = useState(() => {
+    return Array.from({ length: 30 }).map(() => {
+      const id = artworkIds[Math.floor(Math.random() * artworkIds.length)];
+      // Use same dimensions as Home page cards (600x800)
+      return `https://images.unsplash.com/photo-${id}?w=600&h=800&fit=crop&q=80`;
+    });
   });
 
   return (
@@ -102,7 +108,7 @@ export default function Landing() {
 
       {/* Featured Artworks */}
       <section className="py-20 bg-gray-50">
-        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
               Discover Amazing Art
@@ -112,7 +118,7 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             {artworkSamples.map((image, index) => (
               <ArtworkSample key={index} image={image} index={index} />
             ))}
