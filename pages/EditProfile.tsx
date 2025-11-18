@@ -47,10 +47,14 @@ export default function EditProfile() {
     if (coverEnhancer.enhancedImage) setCover(coverEnhancer.enhancedImage);
   }, [coverEnhancer.enhancedImage]);
 
-  const handleFileChange = (e, enhancer) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, enhance: (base64: string) => void) => {
     if (e.target.files && e.target.files[0]) {
       const reader = new FileReader();
-      reader.onload = (event) => enhancer(event.target.result);
+      reader.onload = (event) => {
+        if (typeof event.target?.result === 'string') {
+          enhance(event.target.result);
+        }
+      };
       reader.readAsDataURL(e.target.files[0]);
     }
   };
@@ -64,7 +68,6 @@ export default function EditProfile() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* FIX: Pass userId to createPageUrl for correct navigation. */}
         <button onClick={() => navigate(createPageUrl('Profile', { userId: currentUser.id }))} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-8 transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm font-medium">Back to Profile</span>
@@ -148,7 +151,8 @@ export default function EditProfile() {
             </div>
             
             {isArtist && (
-              <>
+              <div className="border-t border-gray-200 pt-8 space-y-6">
+                <h3 className="text-lg font-semibold text-gray-900">Artist Details</h3>
                 <div className="space-y-2">
                   <Label htmlFor="website" className="text-sm font-medium text-gray-700">Website</Label>
                   <Input id="website" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="yourwebsite.com" className="h-12 rounded-xl" />
@@ -171,13 +175,12 @@ export default function EditProfile() {
                     <div className="relative"><Twitter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input value={socials.twitter} onChange={(e) => handleSocialChange('twitter', e.target.value)} className="pl-10 rounded-lg" placeholder="Twitter username" /></div>
                     <div className="relative"><BehanceIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input value={socials.behance} onChange={(e) => handleSocialChange('behance', e.target.value)} className="pl-10 rounded-lg" placeholder="Behance username" /></div>
                 </div>
-              </>
+              </div>
             )}
 
           </div>
 
           <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-            {/* FIX: Pass userId to createPageUrl for correct navigation. */}
             <Button variant="outline" className="rounded-full px-6" onClick={() => navigate(createPageUrl('Profile', { userId: currentUser.id }))}>Cancel</Button>
             <Button onClick={handleSave} className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-full px-8"><Save className="w-4 h-4 mr-2" /> Save Changes</Button>
           </div>

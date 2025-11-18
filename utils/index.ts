@@ -1,18 +1,30 @@
 
+const pagePaths: Record<string, string> = {
+  Home: 'home',
+  HomeSocial: 'home-social',
+  EmailVerification: 'email-verification',
+  Upload: 'upload',
+  Publish: 'publish',
+  EditProfile: 'edit-profile',
+  Messages: 'messages',
+  Login: 'login',
+  SignUp: 'sign-up',
+};
+
 export const createPageUrl = (pageName: string, params?: Record<string, string>): string => {
-  let path;
   if (pageName === 'Landing') {
-    path = '/';
-  } else {
-     const kebabCaseName = pageName
-      .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
-      .toLowerCase();
-    path = `/${kebabCaseName}`;
+    return '/';
   }
   
-  // A special case for dynamic profile URLs
   if (pageName === 'Profile' && params?.userId) {
     return `/profile/${params.userId}`;
+  }
+
+  let path = pagePaths[pageName];
+
+  if (!path) {
+    console.warn(`No path found for page: ${pageName}`);
+    return '/';
   }
 
   if (params) {

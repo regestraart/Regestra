@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal } from "lucide-react";
@@ -67,7 +66,7 @@ export default function HomeSocial() {
                       <p className="text-sm text-gray-500">2 hours ago</p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="rounded-full">
+                  <Button variant="ghost" size="icon" className="rounded-full" aria-label="More options">
                     <MoreHorizontal className="w-5 h-5 text-gray-500" />
                   </Button>
                 </div>
@@ -81,17 +80,17 @@ export default function HomeSocial() {
                 <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <Button variant="ghost" size="icon" onClick={() => toggleLike(post.id)} className="rounded-full">
+                      <Button variant="ghost" size="icon" onClick={() => toggleLike(post.id)} className="rounded-full" aria-label="Like post">
                         <Heart className={`w-6 h-6 transition-colors ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
                       </Button>
-                      <Button variant="ghost" size="icon" className="rounded-full" onClick={() => handleArtworkClick(post)}>
+                      <Button variant="ghost" size="icon" className="rounded-full" onClick={() => handleArtworkClick(post)} aria-label="Comment on post">
                         <MessageCircle className="w-6 h-6 text-gray-700" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="rounded-full">
+                      <Button variant="ghost" size="icon" className="rounded-full" aria-label="Share post">
                         <Send className="w-6 h-6 text-gray-700" />
                       </Button>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => toggleBookmark(post.id)} className="rounded-full">
+                    <Button variant="ghost" size="icon" onClick={() => toggleBookmark(post.id)} className="rounded-full" aria-label="Bookmark post">
                       <Bookmark className={`w-6 h-6 transition-colors ${postStates[post.id]?.bookmarked ? 'fill-purple-600 text-purple-600' : 'text-gray-700'}`} />
                     </Button>
                   </div>
@@ -109,7 +108,7 @@ export default function HomeSocial() {
                     <Input 
                       type="text" 
                       placeholder="Add a comment..." 
-                      className="flex-1 h-auto py-0 bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0" 
+                      className="flex-1 h-auto py-2 bg-transparent border-none border-b border-gray-200 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-purple-500 rounded-none px-0" 
                     />
                     <button className="text-sm font-semibold text-purple-600 hover:text-purple-700">Post</button>
                   </div>

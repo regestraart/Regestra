@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import Layout from './layout/Layout';
@@ -24,16 +23,16 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Landing />} />
-            <Route path={createPageUrl('Home').substring(1)} element={<Home />} />
-            <Route path={createPageUrl('HomeSocial').substring(1)} element={<HomeSocial />} />
-            <Route path={createPageUrl('EmailVerification').substring(1)} element={<EmailVerification />} />
-            <Route path={createPageUrl('Upload').substring(1)} element={<Upload />} />
-            <Route path={createPageUrl('Publish').substring(1)} element={<Publish />} />
+            <Route path={createPageUrl('Home')} element={<Home />} />
+            <Route path={createPageUrl('HomeSocial')} element={<HomeSocial />} />
+            <Route path={createPageUrl('EmailVerification')} element={<EmailVerification />} />
+            <Route path={createPageUrl('Upload')} element={<Upload />} />
+            <Route path={createPageUrl('Publish')} element={<Publish />} />
             <Route path="/profile/:userId" element={<Profile />} />
-            <Route path={createPageUrl('EditProfile').substring(1)} element={<EditProfile />} />
-            <Route path={createPageUrl('Messages').substring(1)} element={<Messages />} />
-            <Route path={createPageUrl('Login').substring(1)} element={<Login />} />
-            <Route path={createPageUrl('SignUp').substring(1)} element={<SignUp />} />
+            <Route path={createPageUrl('EditProfile')} element={<EditProfile />} />
+            <Route path={createPageUrl('Messages')} element={<Messages />} />
+            <Route path={createPageUrl('Login')} element={<Login />} />
+            <Route path={createPageUrl('SignUp')} element={<SignUp />} />
           </Route>
         </Routes>
       </UserProvider>

@@ -61,14 +61,28 @@ export default function Profile() {
   const isArtist = profileUser.role === 'artist';
 
   const userArtworks = isArtist ? findArtworksByArtistId(profileUser.id) : [];
-  // For demo, "liked" for everyone is just some of the artworks
-  const likedByProfileUser = allArtworks.filter(art => likedArtworks.has(art.id));
+  
+  // FIX: Differentiate between profile user's likes and current user's likes.
+  // For demo, we'll create a mock set of likes for the profile user.
+  const getProfileUserLikedArtworks = () => {
+    // If it's our own profile, show our actual likes.
+    if (isOwnProfile) {
+        return allArtworks.filter(art => likedArtworks.has(art.id));
+    }
+    // For other users, create a stable, mock "liked" list for demonstration.
+    // E.g., The art lover likes the first and third artwork.
+    if (profileUser.role === 'artLover') {
+        const likedIds = [allArtworks[0].id, allArtworks[2].id];
+        return allArtworks.filter(art => likedIds.includes(art.id));
+    }
+    return [];
+  }
   
   let gridContent = [];
   if (isArtist && activeTab === 'artworks') {
     gridContent = userArtworks;
   } else if (activeTab === 'liked') {
-    gridContent = likedByProfileUser;
+    gridContent = getProfileUserLikedArtworks();
   }
 
   const handleArtworkClick = (artwork) => {

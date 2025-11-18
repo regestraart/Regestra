@@ -5,7 +5,7 @@ import { createPageUrl } from '../utils';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
-import { Mail, Lock, Palette, Heart } from 'lucide-react';
+import { Mail, Lock, Palette, Heart, User as UserIcon, ArrowLeft } from 'lucide-react';
 import { useUser } from '../context/UserContext';
 import { users } from '../data/mock';
 
@@ -14,14 +14,21 @@ type Role = 'artist' | 'artLover';
 export default function SignUp() {
   const navigate = useNavigate();
   const { setCurrentUser } = useUser();
+  const [step, setStep] = useState(1);
   const [role, setRole] = useState<Role | null>(null);
 
+  const handleNextStep = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (role) {
+      setStep(2);
+    }
+  };
+  
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
     if (role) {
       // Simulate login with the selected role
       setCurrentUser(users[role]);
-      // In a real app, you'd go to verification. For demo, we go to the home feed.
       navigate(createPageUrl('HomeSocial'));
     }
   };
@@ -41,52 +48,55 @@ export default function SignUp() {
             alt="Regestra" 
             className="h-10 mx-auto mb-4"
           />
-          <h1 className="text-3xl font-bold text-gray-900">Create your Account</h1>
-          <p className="text-gray-600 mt-2">Join our community of artists and art enthusiasts.</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {step === 1 ? "Create your Account" : "Tell us about yourself"}
+          </h1>
+          <p className="text-gray-600 mt-2">
+            {step === 1 ? "Join our community of artists and art enthusiasts." : `You're signing up as an ${role === 'artist' ? 'Artist' : 'Art Lover'}.`}
+          </p>
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
-          <form onSubmit={handleSignUp} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input id="email" type="email" placeholder="you@example.com" required className="pl-10 h-12 rounded-xl" />
+          {step === 1 ? (
+            <form onSubmit={handleNextStep} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input id="email" type="email" placeholder="you@example.com" required className="pl-10 h-12 rounded-xl" /></div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input id="password" type="password" required className="pl-10 h-12 rounded-xl" placeholder="••••••••" />
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input id="password" type="password" required className="pl-10 h-12 rounded-xl" placeholder="••••••••" /></div>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>I am an...</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <button type="button" onClick={() => setRole('artist')} className={roleButtonClasses('artist')}>
-                  <Palette className="w-8 h-8 mb-2 text-purple-600" />
-                  <span className="font-semibold text-gray-800">Artist</span>
-                </button>
-                <button type="button" onClick={() => setRole('artLover')} className={roleButtonClasses('artLover')}>
-                  <Heart className="w-8 h-8 mb-2 text-pink-500" />
-                  <span className="font-semibold text-gray-800">Art Lover</span>
-                </button>
+              <div className="space-y-2">
+                <Label>I am an...</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button type="button" onClick={() => setRole('artist')} className={roleButtonClasses('artist')}><Palette className="w-8 h-8 mb-2 text-purple-600" /><span className="font-semibold text-gray-800">Artist</span></button>
+                  <button type="button" onClick={() => setRole('artLover')} className={roleButtonClasses('artLover')}><Heart className="w-8 h-8 mb-2 text-pink-500" /><span className="font-semibold text-gray-800">Art Lover</span></button>
+                </div>
               </div>
-            </div>
-            
-            <Button type="submit" disabled={!role} className="w-full h-12 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
-              Create Account
-            </Button>
-          </form>
+              <Button type="submit" disabled={!role} className="w-full h-12 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Continue</Button>
+            </form>
+          ) : (
+            <form onSubmit={handleSignUp} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <div className="relative"><UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input id="fullName" type="text" placeholder="Your full name" required className="pl-10 h-12 rounded-xl" /></div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">@</span><Input id="username" type="text" placeholder="your_username" required className="pl-8 h-12 rounded-xl" /></div>
+              </div>
+              <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
+                 <Button type="button" variant="ghost" onClick={() => setStep(1)} className="text-gray-600"><ArrowLeft className="w-4 h-4 mr-2"/> Back</Button>
+                 <Button type="submit" className="w-full sm:w-auto h-12 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-xl font-semibold">Create Account</Button>
+              </div>
+            </form>
+          )}
         </div>
         
         <p className="text-center text-sm text-gray-600 mt-8">
           Already have an account?{' '}
-          <Link to={createPageUrl('Login')} className="text-purple-600 hover:underline font-medium">
-            Log In
-          </Link>
+          <Link to={createPageUrl('Login')} className="text-purple-600 hover:underline font-medium">Log In</Link>
         </p>
       </div>
     </div>

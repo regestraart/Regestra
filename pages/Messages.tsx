@@ -78,7 +78,7 @@ export default function Messages() {
                   <p className="text-sm text-gray-500">{currentChat.online ? 'Active now' : 'Offline'}</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" className="rounded-full"><MoreVertical className="w-5 h-5 text-gray-500" /></Button>
+              <Button variant="ghost" size="icon" className="rounded-full" aria-label="More options"><MoreVertical className="w-5 h-5 text-gray-500" /></Button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
@@ -94,12 +94,12 @@ export default function Messages() {
 
             <div className="p-4 border-t border-gray-200 bg-white">
               <div className="flex items-end gap-3">
-                <Button variant="ghost" size="icon" className="flex-shrink-0 rounded-full"><ImageIcon className="w-5 h-5 text-gray-500" /></Button>
+                <Button variant="ghost" size="icon" className="flex-shrink-0 rounded-full" aria-label="Attach image"><ImageIcon className="w-5 h-5 text-gray-500" /></Button>
                 <div className="flex-1 relative">
                   <Input value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} placeholder="Type a message..." className="pr-12 rounded-full border-gray-200 focus:border-purple-500 focus:ring-purple-500" />
-                  <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full"><Smile className="w-5 h-5 text-gray-500" /></Button>
+                  <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full" aria-label="Add emoji"><Smile className="w-5 h-5 text-gray-500" /></Button>
                 </div>
-                <Button onClick={handleSend} disabled={!message.trim()} className="flex-shrink-0 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-full w-12 h-12 p-0 disabled:opacity-50">
+                <Button onClick={handleSend} disabled={!message.trim()} className="flex-shrink-0 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-full w-12 h-12 p-0 disabled:opacity-50" aria-label="Send message">
                   <Send className="w-5 h-5" />
                 </Button>
               </div>

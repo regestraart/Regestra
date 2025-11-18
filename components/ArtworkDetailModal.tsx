@@ -1,5 +1,3 @@
-
-
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { X, Heart, MessageCircle, Send, Bookmark } from 'lucide-react';
@@ -60,7 +58,7 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
                 <p className="text-sm text-gray-500">@{artist.username}</p>
               </div>
             </Link>
-            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full -mr-2">
+            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full -mr-2" aria-label="Close modal">
               <X className="w-5 h-5 text-gray-500" />
             </Button>
           </div>
@@ -118,17 +116,17 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
           <div className="flex-shrink-0 space-y-4 pt-4 border-t border-gray-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="rounded-full" onClick={onToggleLike}>
+                <Button variant="ghost" size="icon" className="rounded-full" onClick={onToggleLike} aria-label="Like artwork">
                   <Heart className={`w-6 h-6 transition-colors ${isLiked ? 'text-red-500 fill-current' : 'text-gray-700'}`} />
                 </Button>
-                <Button variant="ghost" size="icon" className="rounded-full">
+                <Button variant="ghost" size="icon" className="rounded-full" aria-label="Comment on artwork">
                   <MessageCircle className="w-6 h-6 text-gray-700" />
                 </Button>
-                <Button variant="ghost" size="icon" className="rounded-full">
+                <Button variant="ghost" size="icon" className="rounded-full" aria-label="Share artwork">
                   <Send className="w-6 h-6 text-gray-700" />
                 </Button>
               </div>
-              <Button variant="ghost" size="icon" className="rounded-full">
+              <Button variant="ghost" size="icon" className="rounded-full" aria-label="Bookmark artwork">
                 <Bookmark className="w-6 h-6 text-gray-700" />
               </Button>
             </div>
