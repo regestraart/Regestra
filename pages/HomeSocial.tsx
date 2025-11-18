@@ -1,48 +1,43 @@
 
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Heart, MessageCircle, MoreHorizontal } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
-import { artworks as allArtworks, findUserById } from "../data/mock";
+import { findUserById, getRecommendedArtworks, Artwork } from "../data/mock";
 import { createUrl } from "../utils";
 import ArtworkDetailModal from "../components/ArtworkDetailModal";
+import { useLikedArtworks } from "../hooks/useLikedArtworks";
 
 export default function HomeSocial() {
-  const [selectedArtwork, setSelectedArtwork] = useState(null);
-  const [likedArtworks, setLikedArtworks] = useState<Set<string>>(new Set());
+  const [selectedArtwork, setSelectedArtwork] = useState<any>(null);
+  const { likedArtworks, toggleLike } = useLikedArtworks();
   const [comment, setComment] = useState('');
+  const [feedArtworks, setFeedArtworks] = useState<Artwork[]>([]);
 
+  // Initial load and re-sort when likes change significantly (optional, but good for immediate feedback)
   useEffect(() => {
-    const storedLikes = localStorage.getItem('likedArtworks');
-    if (storedLikes) {
-      setLikedArtworks(new Set(JSON.parse(storedLikes)));
-    }
-  }, []);
+    // Fetch recommended artworks based on current likes
+    const recommended = getRecommendedArtworks(likedArtworks);
+    setFeedArtworks(recommended);
+  }, [likedArtworks.size]); // Re-run when the number of likes changes
 
-  const toggleLike = (artworkId: string) => {
-    const newLikedArtworks = new Set(likedArtworks);
-    if (newLikedArtworks.has(artworkId)) {
-      newLikedArtworks.delete(artworkId);
-    } else {
-      newLikedArtworks.add(artworkId);
-    }
-    setLikedArtworks(newLikedArtworks);
-    localStorage.setItem('likedArtworks', JSON.stringify(Array.from(newLikedArtworks)));
-  };
-
-  const handleArtworkClick = (artwork) => {
+  const handleArtworkClick = (artwork: any) => {
     const artist = findUserById(artwork.artistId);
     setSelectedArtwork({ ...artwork, artist });
   };
 
   const handleCloseModal = () => setSelectedArtwork(null);
 
+  // We limit the initial feed to 50 for performance in this view
+  const displayArtworks = feedArtworks.slice(0, 50);
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
-          {allArtworks.map((post) => {
+          {displayArtworks.map((post) => {
             const artist = findUserById(post.artistId);
             if (!artist) return null;
             
@@ -50,7 +45,7 @@ export default function HomeSocial() {
             const currentLikes = post.likes + (isLiked ? 1 : 0);
 
             return (
-              <div key={post.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div key={post.id} className="bg-white rounded-2xl shadow-sm overflow-hidden animate-fade-in">
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
                     <Link to={createUrl('/profile/:userId', { userId: artist.id })}>
@@ -99,6 +94,15 @@ export default function HomeSocial() {
                     </Link>
                     {post.description}
                   </p>
+                   {/* Recommendation Signal - Optional Visual Cue */}
+                   {post.tags.some(tag => Array.from(likedArtworks).length > 0) && (
+                       <div className="flex gap-2 mt-1">
+                           {post.tags.slice(0, 3).map(tag => (
+                               <span key={tag} className="text-xs text-gray-400">#{tag}</span>
+                           ))}
+                       </div>
+                   )}
+
                   {post.commentsCount > 0 && (
                     <button className="text-sm text-gray-500 hover:text-gray-700" onClick={() => handleArtworkClick(post)}>
                       View all {post.commentsCount} comments
