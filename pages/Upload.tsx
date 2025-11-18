@@ -62,31 +62,19 @@ export default function Upload() {
   };
 
   const handleFile = (file: File) => {
+    // Permissive check: allow all image types supported by browser/Gemini
     if (!file.type.startsWith('image/')) {
-      setFileError("Invalid file type. Please upload an image (JPG, PNG, GIF).");
+      setFileError("Invalid file type. Please upload an image file.");
       return;
     }
 
-    const MIN_SIZE_KB = 100;
-    if (file.size < MIN_SIZE_KB * 1024) {
-        setFileError(`Image is too small. Please upload an image larger than ${MIN_SIZE_KB}KB.`);
-        return;
-    }
-
+    // We explicitly allow low quality/resolution images here so the AI can enhance them.
+    // No size/dimension checks are performed.
     setFileError(null);
     const reader = new FileReader();
     reader.onload = (e) => {
       const originalImage = e.target?.result as string;
-      const img = new Image();
-      img.onload = () => {
-          const MIN_RESOLUTION = 800;
-          if (img.width < MIN_RESOLUTION || img.height < MIN_RESOLUTION) {
-              setFileError(`Image resolution is too low. Please upload an image that is at least ${MIN_RESOLUTION}x${MIN_RESOLUTION} pixels.`);
-              return;
-          }
-          enhanceImage(originalImage);
-      };
-      img.src = originalImage;
+      enhanceImage(originalImage);
     };
     reader.readAsDataURL(file);
   };

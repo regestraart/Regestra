@@ -11,6 +11,9 @@ import { useImageEnhancer } from '../hooks/useImageEnhancer';
 
 type Role = 'artist' | 'artLover';
 
+// Static default image to ensure no identity is "assigned" automatically
+const DEFAULT_AVATAR_URL = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+
 export default function SignUp() {
   const navigate = useNavigate();
   const { setCurrentUser } = useUser();
@@ -38,32 +41,36 @@ export default function SignUp() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      // Allow all image types
+      if (!file.type.startsWith('image/')) {
+         setError("Please upload a valid image file.");
+         return;
+      }
+      
       const reader = new FileReader();
       reader.onload = (event) => {
         if (typeof event.target?.result === 'string') {
           enhanceImage(event.target.result);
         }
       };
-      reader.readAsDataURL(e.target.files[0]);
+      reader.readAsDataURL(file);
     }
   };
   
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
+    // Profile picture is OPTIONAL. We only require role, name, and username here.
     if (role && fullName && username) {
-      if (!enhancedImage) {
-        setError("Please upload a profile picture to create your account.");
-        return;
-      }
-
       setIsSigningUp(true);
       setError(null);
       
       setTimeout(() => {
         let newUser: Omit<User, 'id'>;
 
-        // Mandatory profile picture - no fallback
-        const finalAvatar = enhancedImage as string;
+        // Use enhanced image if uploaded, otherwise use static default
+        // This ensures we do not 'generate' a random avatar, but use a neutral placeholder if user skips upload.
+        const finalAvatar = (enhancedImage as string) || DEFAULT_AVATAR_URL;
 
         const baseUser = {
           email,
@@ -203,6 +210,7 @@ export default function SignUp() {
                     />
                 </div>
               </div>
+              <p className="text-center text-sm text-gray-500 -mt-4 mb-4">Profile Picture (Optional)</p>
               {enhancementError && <p className="text-center text-xs text-red-500">{enhancementError}</p>}
 
               <div className="space-y-2">
@@ -215,7 +223,7 @@ export default function SignUp() {
               </div>
               <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
                  <Button type="button" variant="ghost" onClick={() => setStep(1)} className="text-gray-600" disabled={isSigningUp}><ArrowLeft className="w-4 h-4 mr-2"/> Back</Button>
-                 <Button type="submit" className="w-full sm:w-auto h-12 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-xl font-semibold" disabled={isSigningUp}>
+                 <Button type="submit" className="w-full sm:w-auto h-12 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-xl font-semibold" disabled={isSigningUp || isEnhancing}>
                   {isSigningUp ? <LoaderCircle className="w-5 h-5 animate-spin" /> : "Create Account"}
                  </Button>
               </div>
