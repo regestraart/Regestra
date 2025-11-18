@@ -193,7 +193,7 @@ export default function Profile() {
                         {isArtist && <div><p className="text-2xl font-bold text-gray-900">{userArtworks.length}</p><p className="text-sm text-gray-600">Artworks</p></div>}
                         {!isArtist && <div><p className="text-2xl font-bold text-gray-900">{userArtworks.length}</p><p className="text-sm text-gray-600">Collections</p></div>}
                         <div><p className="text-2xl font-bold text-gray-900">{getProfileUserLikedArtworks().length}</p><p className="text-sm text-gray-600">Liked</p></div>
-                        <div><p className="text-2xl font-bold text-gray-900">{profileUser.stats.followers?.toLocaleString() || 0}</p><p className="text-sm text-gray-600">Followers</p></div>
+                        <div><p className="text-4xl font-extrabold text-gray-900">{profileUser.stats.followers?.toLocaleString() || 0}</p><p className="text-sm text-gray-600">Followers</p></div>
                         <div><p className="text-2xl font-bold text-gray-900">{profileUser.stats.following}</p><p className="text-sm text-gray-600">Following</p></div>
                     </div>
                     {isArtist && profileUser.commissionStatus && profileUser.commissionStatus !== 'Not Available' && (

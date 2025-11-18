@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createUrl } from "../utils";
@@ -7,6 +8,7 @@ import { artworks as allArtworks, findUserById } from "../data/mock";
 
 export default function Home() {
   const [likedArtworks, setLikedArtworks] = useState<Set<string>>(new Set());
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const storedLikes = localStorage.getItem('likedArtworks');
@@ -26,6 +28,14 @@ export default function Home() {
     localStorage.setItem('likedArtworks', JSON.stringify(Array.from(newLikedArtworks)));
   };
 
+  const handleImageError = (id: string) => {
+    setFailedImages(prev => {
+      const newSet = new Set(prev);
+      newSet.add(id);
+      return newSet;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -33,6 +43,7 @@ export default function Home() {
           {allArtworks.map((artwork) => {
             const artist = findUserById(artwork.artistId);
             if (!artist) return null;
+            if (failedImages.has(artwork.id)) return null;
             
             const isLiked = likedArtworks.has(artwork.id);
             const currentLikes = artwork.likes + (isLiked ? 1 : 0);
@@ -47,6 +58,7 @@ export default function Home() {
                     src={artwork.image}
                     alt={artwork.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    onError={() => handleImageError(artwork.id)}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="absolute bottom-4 left-4 right-4 flex items-center justify-start">

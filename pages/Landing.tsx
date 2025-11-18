@@ -1,8 +1,28 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { ArrowRight, Sparkles, Users, Palette } from "lucide-react";
+
+const ArtworkSample = ({ image, index }: { image: string; index: number }) => {
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError) return null;
+
+  return (
+    <div 
+      className="group relative aspect-[4/5] rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-default"
+    >
+      <img 
+        src={image} 
+        alt={`Artwork ${index + 1}`} 
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        loading="lazy"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
+};
 
 export default function Landing() {
   // Pool of artistic/abstract image IDs to simulate AI art
@@ -94,17 +114,7 @@ export default function Landing() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 mb-12">
             {artworkSamples.map((image, index) => (
-              <div 
-                key={index} 
-                className="group relative aspect-[4/5] rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-default"
-              >
-                <img 
-                  src={image} 
-                  alt={`Artwork ${index + 1}`} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  loading="lazy"
-                />
-              </div>
+              <ArtworkSample key={index} image={image} index={index} />
             ))}
           </div>
 
