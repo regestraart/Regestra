@@ -1,7 +1,6 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { createPageUrl } from "../utils";
 import { Button } from "../components/ui/Button";
 import { Mail, CheckCircle, ArrowRight } from "lucide-react";
 
@@ -47,7 +46,7 @@ export default function EmailVerification() {
               Resend Verification Email
             </Button>
 
-            <Link to={createPageUrl('Login')}>
+            <Link to="/login">
               <Button
                 variant="outline"
                 className="w-full h-12 rounded-xl border-2"

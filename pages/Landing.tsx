@@ -1,6 +1,6 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
-import { createPageUrl } from "../utils";
 import { Button } from "../components/ui/Button";
 import { ArrowRight, Sparkles, Users, Palette } from "lucide-react";
 
@@ -34,6 +34,19 @@ export default function Landing() {
             <p className="text-xl md:text-2xl text-purple-100 mb-10 max-w-2xl mx-auto">
               Join thousands of artists sharing their work, building their portfolio, and connecting with a vibrant creative community.
             </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link to="/sign-up">
+                <Button size="xl" variant="primary-light" className="rounded-full font-semibold shadow-xl">
+                  Get Started Free
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button size="xl" variant="outline-light" className="rounded-full font-semibold">
+                  Login
+                </Button>
+              </Link>
+            </div>
             
           </div>
         </div>
@@ -80,7 +93,7 @@ export default function Landing() {
           </div>
 
           <div className="text-center">
-            <Link to={createPageUrl('Home')}>
+            <Link to="/home">
               <Button size="lg" variant="outline" className="rounded-full px-8">
                 View All Artworks
                 <ArrowRight className="ml-2 w-4 h-4" />
@@ -145,7 +158,7 @@ export default function Landing() {
           <p className="text-xl text-purple-100 mb-10">
             Join thousands of artists who trust Regestra to showcase their creative work
           </p>
-          <Link to={createPageUrl('SignUp')}>
+          <Link to="/sign-up">
             <Button size="xl" variant="primary-light" className="rounded-full font-semibold shadow-xl">
               Create Your Free Account
               <ArrowRight className="ml-2 w-5 h-5" />

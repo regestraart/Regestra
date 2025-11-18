@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { createPageUrl } from "../utils";
+import { createUrl } from "../utils";
 import { Heart } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { artworks as allArtworks, findUserById } from "../data/mock";

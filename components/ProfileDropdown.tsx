@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { User, LogOut } from 'lucide-react';
-import { createPageUrl } from '../utils';
+import { createUrl } from '../utils';
 import { User as UserType } from '../data/mock';
 
 interface ProfileDropdownProps {
@@ -18,7 +19,7 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ user, onSignOut }) =>
       </div>
       <div className="py-2">
         <Link 
-          to={createPageUrl('Profile', { userId: user.id })} 
+          to={createUrl('/profile/:userId', { userId: user.id })} 
           className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
         >
           <User className="w-4 h-4 mr-3" />

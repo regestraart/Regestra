@@ -1,27 +1,35 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createPageUrl } from '../utils';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
-import { Mail, Lock, LoaderCircle } from 'lucide-react';
+import { Mail, Lock, LoaderCircle, AlertTriangle } from 'lucide-react';
 import { useUser } from '../context/UserContext';
-import { users } from '../data/mock';
+import { authenticateUser } from '../data/mock';
 
 export default function Login() {
   const navigate = useNavigate();
   const { setCurrentUser } = useUser();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
+    setError(null);
+
     setTimeout(() => {
-      // For demo purposes, log in as the artist by default
-      setCurrentUser(users.artist);
-      navigate(createPageUrl('HomeSocial'));
+      const user = authenticateUser(email, password);
+      if (user) {
+        setCurrentUser(user);
+        navigate('/home-social');
+      } else {
+        setError('Invalid email or password. Please try again.');
+        setIsLoading(false);
+      }
     }, 1000);
   };
 
@@ -40,21 +48,27 @@ export default function Login() {
 
         <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
           <form onSubmit={handleLogin} className="space-y-6">
+            {error && (
+              <div className="bg-red-50 text-red-700 p-3 rounded-lg flex items-center gap-2 text-sm">
+                <AlertTriangle className="w-4 h-4" />
+                {error}
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input id="email" type="email" placeholder="you@example.com" required className="pl-10 h-12 rounded-xl" />
+                <Input id="email" type="email" placeholder="you@example.com" required className="pl-10 h-12 rounded-xl" value={email} onChange={e => setEmail(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <a href="#" className="text-sm text-purple-600 hover:underline">Forgot password?</a>
+                <Link to="/forgot-password" className="text-sm text-purple-600 hover:underline">Forgot password?</Link>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input id="password" type="password" required className="pl-10 h-12 rounded-xl" placeholder="••••••••" />
+                <Input id="password" type="password" required className="pl-10 h-12 rounded-xl" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
               </div>
             </div>
             
@@ -66,7 +80,7 @@ export default function Login() {
         
         <p className="text-center text-sm text-gray-600 mt-8">
           Don't have an account?{' '}
-          <Link to={createPageUrl('SignUp')} className="text-purple-600 hover:underline font-medium">
+          <Link to="/sign-up" className="text-purple-600 hover:underline font-medium">
             Sign Up
           </Link>
         </p>

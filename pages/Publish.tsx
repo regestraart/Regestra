@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { createPageUrl } from "../utils";
+import { createUrl } from "../utils";
 import { Button } from "../components/ui/Button";
 import { Label } from "../components/ui/Label";
 import { CheckCircle, ArrowLeft, Globe } from "lucide-react";
@@ -21,9 +21,8 @@ export default function Publish() {
   const { image, title, description, tags } = (location.state as LocationState) || {};
 
   const handlePublish = () => {
-    // FIX: Add currentUser check and pass userId to createPageUrl for profile navigation.
     if (currentUser) {
-      navigate(createPageUrl('Profile', { userId: currentUser.id }));
+      navigate(createUrl('/profile/:userId', { userId: currentUser.id }));
     }
   };
 

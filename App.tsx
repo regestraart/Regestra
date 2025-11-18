@@ -13,7 +13,7 @@ import EditProfile from './pages/EditProfile';
 import Messages from './pages/Messages';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
-import { createPageUrl } from './utils';
+import ForgotPassword from './pages/ForgotPassword';
 import { UserProvider } from './context/UserContext';
 
 export default function App() {
@@ -23,16 +23,17 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Landing />} />
-            <Route path={createPageUrl('Home').substring(1)} element={<Home />} />
-            <Route path={createPageUrl('HomeSocial').substring(1)} element={<HomeSocial />} />
-            <Route path={createPageUrl('EmailVerification').substring(1)} element={<EmailVerification />} />
-            <Route path={createPageUrl('Upload').substring(1)} element={<Upload />} />
-            <Route path={createPageUrl('Publish').substring(1)} element={<Publish />} />
+            <Route path="home" element={<Home />} />
+            <Route path="home-social" element={<HomeSocial />} />
+            <Route path="email-verification" element={<EmailVerification />} />
+            <Route path="upload" element={<Upload />} />
+            <Route path="publish" element={<Publish />} />
             <Route path="profile/:userId" element={<Profile />} />
-            <Route path={createPageUrl('EditProfile').substring(1)} element={<EditProfile />} />
-            <Route path={createPageUrl('Messages').substring(1)} element={<Messages />} />
-            <Route path={createPageUrl('Login').substring(1)} element={<Login />} />
-            <Route path={createPageUrl('SignUp').substring(1)} element={<SignUp />} />
+            <Route path="edit-profile" element={<EditProfile />} />
+            <Route path="messages" element={<Messages />} />
+            <Route path="login" element={<Login />} />
+            <Route path="sign-up" element={<SignUp />} />
+            <Route path="forgot-password" element={<ForgotPassword />} />
           </Route>
         </Routes>
       </UserProvider>

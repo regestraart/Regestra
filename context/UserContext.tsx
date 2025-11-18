@@ -1,6 +1,6 @@
 
-import React, { createContext, useState, useContext, PropsWithChildren } from 'react';
-import { users, User } from '../data/mock';
+import React, { createContext, useState, useContext, PropsWithChildren, useEffect } from 'react';
+import { User, findUserById } from '../data/mock';
 
 interface UserContextType {
   currentUser: User | null;
@@ -10,8 +10,36 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: PropsWithChildren) => {
-  // In a real app, this would be null initially and set after login.
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, _setCurrentUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    try {
+      const storedUserId = localStorage.getItem('currentUser');
+      if (storedUserId) {
+        const user = findUserById(storedUserId);
+        _setCurrentUser(user || null);
+      }
+    } catch (error) {
+      console.error("Failed to load user session from localStorage", error);
+      _setCurrentUser(null);
+      localStorage.removeItem('currentUser');
+    }
+    setIsLoading(false);
+  }, []);
+
+  const setCurrentUser = (user: User | null) => {
+    _setCurrentUser(user);
+    if (user) {
+      localStorage.setItem('currentUser', user.id);
+    } else {
+      localStorage.removeItem('currentUser');
+    }
+  };
+  
+  if (isLoading) {
+    return null; // Or a loading spinner for the whole app
+  }
 
   return (
     <UserContext.Provider value={{ currentUser, setCurrentUser }}>

@@ -1,24 +1,25 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { X, Heart, MessageCircle, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { User, Artwork, CollectionArtwork } from '../data/mock';
-import { createPageUrl } from '../utils';
+import { createUrl } from '../utils';
+import ConfirmationModal from './ConfirmationModal';
 
-// FIX: Change ModalArtwork to be a union type, which is more flexible and fixes assignability issues.
 type ModalArtwork = Artwork | CollectionArtwork;
 
 interface ArtworkDetailModalProps {
   artwork: ModalArtwork;
-  artist: Partial<User> & { name: string };
+  artist?: Partial<User> & { name: string };
   onClose: () => void;
   isLiked: boolean;
   onToggleLike: () => void;
-  onDelete?: (artworkId: string) => void;
+  onDelete?: () => void;
 }
 
 const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist, onClose, isLiked, onToggleLike, onDelete }) => {
-  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -34,19 +35,15 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
     };
   }, [onClose]);
 
-  if (!artwork || !artist) return null;
+  if (!artwork) return null;
   
   const currentLikes = (('likes' in artwork && artwork.likes) || 0) + (isLiked ? 1 : 0);
 
-  const handleDeleteClick = () => {
-    if (onDelete) {
-        onDelete(artwork.id);
-    }
-  };
-
   const isPlatformArtwork = 'artistId' in artwork;
+  const artistName = artist?.name || ('artistName' in artwork ? artwork.artistName : 'Unknown Artist');
 
   return (
+    <>
     <div 
       className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in" 
       onClick={onClose}
@@ -65,8 +62,8 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
 
         <div className="w-full md:w-2/5 flex flex-col p-6 overflow-y-auto">
           <div className="flex items-start justify-between mb-4 flex-shrink-0">
-            {isPlatformArtwork && artist.id ? (
-              <Link to={createPageUrl('Profile', { userId: artist.id })} className="flex items-center gap-3 group" onClick={onClose}>
+            {isPlatformArtwork && artist?.id ? (
+              <Link to={createUrl('/profile/:userId', { userId: artist.id })} className="flex items-center gap-3 group" onClick={onClose}>
                 <img src={artist.avatar} alt={artist.name} className="w-12 h-12 rounded-full" />
                 <div>
                   <p className="font-bold text-gray-900 group-hover:underline">{artist.name}</p>
@@ -76,11 +73,10 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
             ) : (
                  <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-500 text-xl">
-                        {artist.name.charAt(0)}
+                        {artistName.charAt(0)}
                     </div>
                     <div>
-                        {/* FIX: Use artist.name from props for consistency, as it's already correctly determined in the parent component. */}
-                        <p className="font-bold text-gray-900">{artist.name}</p>
+                        <p className="font-bold text-gray-900">{artistName}</p>
                         <p className="text-sm text-gray-500">From personal collection</p>
                     </div>
                 </div>
@@ -104,7 +100,7 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
                   <span>{artwork.size}</span>
                 </div>
               )}
-              {'tags' in artwork && artwork.tags && artwork.tags.length > 0 && (
+              {'tags' in artwork && artwork.tags && Array.isArray(artwork.tags) && artwork.tags.length > 0 && (
                 <div className="flex">
                   <span className="font-semibold text-gray-800 w-24 flex-shrink-0">Tags</span>
                   <div className="flex flex-wrap gap-2">
@@ -150,19 +146,9 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
                 </Button>
               </div>
               {onDelete && (
-                <div>
-                  {!showConfirmDelete ? (
-                    <Button variant="ghost" size="icon" className="rounded-full text-gray-500 hover:bg-red-50 hover:text-red-600" onClick={() => setShowConfirmDelete(true)} aria-label="Delete artwork">
-                      <Trash2 className="w-5 h-5" />
-                    </Button>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-gray-700">Are you sure?</span>
-                      <Button variant="ghost" size="sm" onClick={() => setShowConfirmDelete(false)}>Cancel</Button>
-                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDeleteClick}>Delete</Button>
-                    </div>
-                  )}
-                </div>
+                <Button variant="ghost" size="icon" className="rounded-full text-gray-500 hover:bg-red-50 hover:text-red-600" onClick={() => setShowDeleteConfirm(true)} aria-label="Delete artwork">
+                  <Trash2 className="w-5 h-5" />
+                </Button>
               )}
             </div>
              <p className="font-semibold text-gray-900 text-sm">
@@ -184,6 +170,16 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
         .animate-slide-up { animation: slide-up 0.3s ease-out forwards; }
       `}</style>
     </div>
+     {showDeleteConfirm && onDelete && (
+        <ConfirmationModal 
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={onDelete}
+          title="Delete Artwork"
+          description="Are you sure you want to delete this artwork? This action is irreversible and the artwork will be permanently removed."
+          confirmText="Delete Forever"
+        />
+      )}
+    </>
   );
 };
 

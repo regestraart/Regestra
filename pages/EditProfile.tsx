@@ -1,14 +1,16 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "../utils";
+import { createUrl } from "../utils";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Textarea } from "../components/ui/Textarea";
 import { Label } from "../components/ui/Label";
-import { Camera, ArrowLeft, Save, LoaderCircle, Sparkles, Mail, Link as LinkIcon, Instagram, Twitter } from "lucide-react";
+import { Camera, ArrowLeft, Save, LoaderCircle, Sparkles, Instagram, Twitter, AlertTriangle } from "lucide-react";
 import { useImageEnhancer } from "../hooks/useImageEnhancer";
 import { useUser } from "../context/UserContext";
+import ConfirmationModal from "../components/ConfirmationModal";
+import { deleteUser } from "../data/mock";
 
 const BehanceIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -18,9 +20,10 @@ const BehanceIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function EditProfile() {
   const navigate = useNavigate();
-  const { currentUser } = useUser();
+  const { currentUser, setCurrentUser } = useUser();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  if (!currentUser) return null; // or loading state
+  if (!currentUser) return null; 
 
   const isArtist = currentUser.role === 'artist';
 
@@ -63,12 +66,20 @@ export default function EditProfile() {
     setSocials(prev => ({ ...prev, [platform]: value }));
   };
 
-  const handleSave = () => navigate(createPageUrl('Profile', { userId: currentUser.id }));
+  const handleSave = () => navigate(createUrl('/profile/:userId', { userId: currentUser.id }));
+
+  const handleDeleteAccount = () => {
+    deleteUser(currentUser.id);
+    setCurrentUser(null);
+    setShowDeleteConfirm(false);
+    navigate('/');
+  };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <button onClick={() => navigate(createPageUrl('Profile', { userId: currentUser.id }))} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-8 transition-colors">
+        <button onClick={() => navigate(createUrl('/profile/:userId', { userId: currentUser.id }))} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-8 transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm font-medium">Back to Profile</span>
         </button>
@@ -79,13 +90,13 @@ export default function EditProfile() {
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl p-8 space-y-8">
-          <div>
-            <Label htmlFor="cover-upload" className="text-sm font-medium text-gray-700 mb-3 block">Cover Photo</Label>
-            <div className="relative">
+          
+          <div className="relative">
+             <Label htmlFor="cover-upload" className="text-sm font-medium text-gray-700 mb-3 block">Cover Photo</Label>
               <input type="file" id="cover-upload" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, coverEnhancer.enhanceImage)} />
               <label htmlFor="cover-upload" className="cursor-pointer">
                 <div className="relative h-40 rounded-2xl overflow-hidden bg-gray-200 group">
-                  <img src={cover} alt="Cover" className="w-full h-full object-cover" />
+                  {cover && <img src={cover} alt="Cover" className="w-full h-full object-cover" />}
                   {coverEnhancer.isEnhancing && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white">
                       <LoaderCircle className="w-8 h-8 animate-spin" />
@@ -102,9 +113,7 @@ export default function EditProfile() {
               </label>
               {coverEnhancer.enhancementError && <p className="text-sm text-red-600 mt-2">{coverEnhancer.enhancementError}</p>}
             </div>
-          </div>
           
-
           <div>
             <Label className="text-sm font-medium text-gray-700 mb-3 block">Profile Picture</Label>
             <div className="flex items-center gap-6">
@@ -176,15 +185,34 @@ export default function EditProfile() {
                 </div>
               </div>
             )}
-
           </div>
 
           <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-            <Button variant="outline" className="rounded-full px-6" onClick={() => navigate(createPageUrl('Profile', { userId: currentUser.id }))}>Cancel</Button>
+            <Button variant="outline" className="rounded-full px-6" onClick={() => navigate(createUrl('/profile/:userId', { userId: currentUser.id }))}>Cancel</Button>
             <Button onClick={handleSave} className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-full px-8"><Save className="w-4 h-4 mr-2" /> Save Changes</Button>
           </div>
         </div>
+
+        <div className="mt-8 bg-white rounded-3xl shadow-xl p-8 border border-red-200">
+            <h3 className="text-lg font-semibold text-red-800">Danger Zone</h3>
+            <p className="text-sm text-gray-600 mt-2 mb-4">Deleting your account is a permanent action and cannot be undone. All your data, including your profile and artworks, will be removed forever.</p>
+            <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Delete My Account
+            </Button>
+        </div>
+
       </div>
     </div>
+    {showDeleteConfirm && (
+        <ConfirmationModal 
+            onClose={() => setShowDeleteConfirm(false)}
+            onConfirm={handleDeleteAccount}
+            title="Delete Account"
+            description="Are you absolutely sure you want to delete your account? This action cannot be undone."
+            confirmText="Yes, Delete My Account"
+        />
+    )}
+    </>
   );
 }

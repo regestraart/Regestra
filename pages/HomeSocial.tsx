@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Heart, MessageCircle, MoreHorizontal } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { artworks as allArtworks, findUserById } from "../data/mock";
-import { createPageUrl } from "../utils";
+import { createUrl } from "../utils";
 import ArtworkDetailModal from "../components/ArtworkDetailModal";
 
 export default function HomeSocial() {
@@ -52,11 +53,11 @@ export default function HomeSocial() {
               <div key={post.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <Link to={createPageUrl('Profile', { userId: artist.id })}>
+                    <Link to={createUrl('/profile/:userId', { userId: artist.id })}>
                       <img src={artist.avatar} alt={artist.name} className="w-10 h-10 rounded-full" />
                     </Link>
                     <div>
-                      <Link to={createPageUrl('Profile', { userId: artist.id })}>
+                      <Link to={createUrl('/profile/:userId', { userId: artist.id })}>
                         <p className="font-semibold text-gray-900 hover:underline">{artist.name}</p>
                       </Link>
                       <p className="text-sm text-gray-500">2 hours ago</p>
@@ -93,14 +94,16 @@ export default function HomeSocial() {
                   </div>
                   <p className="font-semibold text-gray-900">{currentLikes.toLocaleString()} likes</p>
                   <p className="text-gray-900">
-                    <Link to={createPageUrl('Profile', { userId: artist.id })}>
+                    <Link to={createUrl('/profile/:userId', { userId: artist.id })}>
                       <span className="font-semibold mr-2 hover:underline">{artist.name}</span>
                     </Link>
                     {post.description}
                   </p>
-                  <button className="text-sm text-gray-500 hover:text-gray-700" onClick={() => handleArtworkClick(post)}>
-                    View all comments
-                  </button>
+                  {post.commentsCount > 0 && (
+                    <button className="text-sm text-gray-500 hover:text-gray-700" onClick={() => handleArtworkClick(post)}>
+                      View all {post.commentsCount} comments
+                    </button>
+                  )}
                   <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
                     <Input 
                       type="text" 

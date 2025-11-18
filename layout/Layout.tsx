@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
-import { createPageUrl } from "../utils";
+import { createUrl } from "../utils";
 import { Home, Upload, MessageCircle, Search, Bell, LogIn, UserPlus } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -14,9 +14,9 @@ export default function Layout() {
   const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useUser();
   const isLoggedIn = !!currentUser;
-  const isLanding = location.pathname === createPageUrl('Landing');
-  const isAuthPage = location.pathname === createPageUrl('Login') || location.pathname === createPageUrl('SignUp');
-  const isHomePage = location.pathname === createPageUrl('Home');
+  const isLanding = location.pathname === '/';
+  const isAuthPage = ['/login', '/sign-up', '/forgot-password'].includes(location.pathname);
+  const isHomePage = location.pathname === '/home';
   
   const [showNotifications, setShowNotifications] = useState(false);
   const [hasUnread, setHasUnread] = useState(true);
@@ -48,15 +48,17 @@ export default function Layout() {
   const handleSignOut = () => {
     setCurrentUser(null);
     setShowProfileDropdown(false);
-    navigate(createPageUrl('Landing'));
+    navigate('/');
   };
 
   const Logo = () => (
-    <img
-      src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/user_691b6257d4173f2ed6ec3e95/7495ad18b_RegestraLogo.png"
-      alt="Regestra"
-      className="h-8"
-    />
+    <div className={isLoggedIn ? "" : "cursor-pointer"} onClick={() => !isLoggedIn && navigate('/')}>
+      <img
+        src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/user_691b6257d4173f2ed6ec3e95/7495ad18b_RegestraLogo.png"
+        alt="Regestra"
+        className="h-8"
+      />
+    </div>
   );
 
   return (
@@ -64,25 +66,19 @@ export default function Layout() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {isLoggedIn ? (
-              <div className="flex items-center gap-3">
-                <Logo />
-              </div>
-            ) : (
-              <Link to={createPageUrl('Landing')} className="flex items-center gap-3">
-                <Logo />
-              </Link>
-            )}
+            <div className="flex items-center gap-3">
+              <Logo />
+            </div>
 
             {isLanding && (
                <nav className="flex items-center gap-2">
-                  <Link to={createPageUrl('Login')}>
+                  <Link to="/login">
                     <Button variant="ghost" className="rounded-full">
                       <LogIn className="w-4 h-4 mr-2" />
                       Log In
                     </Button>
                   </Link>
-                  <Link to={createPageUrl('SignUp')}>
+                  <Link to="/sign-up">
                     <Button className="rounded-full">
                       <UserPlus className="w-4 h-4 mr-2" />
                       Sign Up
@@ -103,13 +99,13 @@ export default function Layout() {
                       />
                     </div>
                     <nav className="flex items-center gap-1">
-                      <Link to={createPageUrl('HomeSocial')}>
+                      <Link to="/home-social">
                         <Button variant="ghost" size="icon" className="relative rounded-full" aria-label="Home feed">
                           <Home className="w-5 h-5" />
                         </Button>
                       </Link>
                       {currentUser.role === 'artist' && (
-                        <Link to={createPageUrl('Upload')}>
+                        <Link to="/upload">
                           <Button variant="ghost" size="icon" className="rounded-full" aria-label="Upload artwork">
                             <Upload className="w-5 h-5" />
                           </Button>
@@ -122,7 +118,7 @@ export default function Layout() {
                         </Button>
                         {showNotifications && <NotificationsPopover />}
                       </div>
-                      <Link to={createPageUrl('Messages')}>
+                      <Link to="/messages">
                         <Button variant="ghost" size="icon" className="rounded-full" aria-label="Messages">
                           <MessageCircle className="w-5 h-5" />
                         </Button>
@@ -138,14 +134,14 @@ export default function Layout() {
                 ) : (
                   <nav className="flex items-center gap-6">
                     {!isHomePage && (
-                        <Link to={createPageUrl('Home')} className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                        <Link to="/home" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
                             Explore
                         </Link>
                     )}
-                    <Link to={createPageUrl('Login')} className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                    <Link to="/login" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
                       Log In
                     </Link>
-                    <Link to={createPageUrl('SignUp')}>
+                    <Link to="/sign-up">
                       <Button className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-full px-6">
                         Sign Up
                       </Button>
@@ -161,50 +157,6 @@ export default function Layout() {
       <main>
         <Outlet />
       </main>
-
-      {!isLoggedIn && !isAuthPage && !isLanding && !isHomePage && (
-        <footer className="bg-white border-t border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Product</h3>
-                <ul className="space-y-3">
-                  <li><a href="#" className="text-sm text-gray-600 hover:text-gray-900">Features</a></li>
-                  <li><a href="#" className="text-sm text-gray-600 hover:text-gray-900">Pricing</a></li>
-                  <li><a href="#" className="text-sm text-gray-600 hover:text-gray-900">FAQ</a></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Company</h3>
-                <ul className="space-y-3">
-                  <li><a href="#" className="text-sm text-gray-600 hover:text-gray-900">About</a></li>
-                  <li><a href="#" className="text-sm text-gray-600 hover:text-gray-900">Blog</a></li>
-                  <li><a href="#" className="text-sm text-gray-600 hover:text-gray-900">Careers</a></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Resources</h3>
-                <ul className="space-y-3">
-                  <li><a href="#" className="text-sm text-gray-600 hover:text-gray-900">Community</a></li>
-                  <li><a href="#" className="text-sm text-gray-600 hover:text-gray-900">Help Center</a></li>
-                  <li><a href="#" className="text-sm text-gray-600 hover:text-gray-900">Contact</a></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Legal</h3>
-                <ul className="space-y-3">
-                  <li><a href="#" className="text-sm text-gray-600 hover:text-gray-900">Privacy</a></li>
-                  <li><a href="#" className="text-sm text-gray-600 hover:text-gray-900">Terms</a></li>
-                  <li><a href="#" className="text-sm text-gray-600 hover:text-gray-900">License</a></li>
-                </ul>
-              </div>
-            </div>
-            <div className="mt-12 pt-8 border-t border-gray-200">
-              <p className="text-sm text-gray-500 text-center">© 2024 Regestra. All rights reserved.</p>
-            </div>
-          </div>
-        </footer>
-      )}
     </div>
   );
 }

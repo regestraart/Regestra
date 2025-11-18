@@ -1,7 +1,6 @@
 
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { createPageUrl } from "../utils";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Textarea } from "../components/ui/Textarea";
@@ -27,7 +26,7 @@ export default function Upload() {
         <ShieldOff className="w-16 h-16 text-red-500 mb-4" />
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Access Denied</h1>
         <p className="text-gray-600 mb-6">Only users with an 'Artist' role can upload artwork.</p>
-        <Link to={createPageUrl('HomeSocial')}>
+        <Link to="/home-social">
           <Button>Back to Home</Button>
         </Link>
       </div>
@@ -93,7 +92,7 @@ export default function Upload() {
   };
 
   const handleContinue = () => {
-    navigate(createPageUrl('Publish'), {
+    navigate('/publish', {
       state: { image: enhancedImage, title, description, tags }
     });
   };
