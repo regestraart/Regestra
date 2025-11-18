@@ -10,9 +10,8 @@ import { artworks as allArtworks, findUserById } from "../data/mock";
 export default function Home() {
   const [likedArtworks, setLikedArtworks] = useState<Set<string>>(new Set());
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
-  const [visibleCount, setVisibleCount] = useState(20);
-
-  // Shuffle artworks on component mount so they are randomized every time the user visits
+  
+  // Shuffle artworks on component mount and select 200
   const [displayArtworks] = useState(() => {
     const shuffled = [...allArtworks];
     // Fisher-Yates shuffle
@@ -20,7 +19,8 @@ export default function Home() {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    return shuffled;
+    // Requirement: Display 200 rotating images.
+    return shuffled.slice(0, 200);
   });
 
   useEffect(() => {
@@ -49,17 +49,11 @@ export default function Home() {
     });
   };
 
-  const handleLoadMore = () => {
-    setVisibleCount(prev => Math.min(prev + 20, displayArtworks.length));
-  };
-
-  const visibleArtworks = displayArtworks.slice(0, visibleCount);
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {visibleArtworks.map((artwork) => {
+          {displayArtworks.map((artwork) => {
             const artist = findUserById(artwork.artistId);
             if (!artist) return null;
             if (failedImages.has(artwork.id)) return null;
@@ -115,19 +109,6 @@ export default function Home() {
             );
           })}
         </div>
-
-        {visibleCount < displayArtworks.length && (
-          <div className="text-center mt-12">
-            <Button 
-              variant="outline" 
-              size="lg" 
-              className="rounded-full px-8"
-              onClick={handleLoadMore}
-            >
-              Load More Artworks
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -103,6 +103,10 @@ export default function SignUp() {
 
         try {
           const registeredUser = registerUser(newUser);
+          
+          // Simulate sending notification to admin
+          console.log(`[Admin Notification] Sending email to contact@regestra.com: New user signed up with email: ${registeredUser.email}`);
+          
           setCurrentUser(registeredUser);
           navigate('/home-social');
         } catch (err: any) {

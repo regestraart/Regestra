@@ -52,9 +52,9 @@ export default function Landing() {
     "1558591714-0320663d6dcd"     // Abstract 3
   ];
 
-  // Generate 30 items by randomly selecting from the ID pool on mount
+  // Generate 20 items by randomly selecting from the ID pool on mount
   const [artworkSamples] = useState(() => {
-    return Array.from({ length: 30 }).map(() => {
+    return Array.from({ length: 20 }).map(() => {
       const id = artworkIds[Math.floor(Math.random() * artworkIds.length)];
       // Use same dimensions as Home page cards (600x800)
       return `https://images.unsplash.com/photo-${id}?w=600&h=800&fit=crop&q=80`;

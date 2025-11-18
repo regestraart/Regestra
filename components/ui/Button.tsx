@@ -1,8 +1,7 @@
-
 import React from 'react';
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'default' | 'outline' | 'ghost' | 'outline-light' | 'primary-light' | 'destructive';
+  variant?: 'default' | 'outline' | 'ghost' | 'outline-light' | 'primary-light' | 'destructive' | 'link';
   size?: 'default' | 'sm' | 'lg' | 'icon' | 'xl';
 };
 
@@ -22,6 +21,7 @@ const Button: React.FC<ButtonProps> = ({
     ghost: 'hover:bg-gray-100',
     'primary-light': 'bg-white text-purple-600 hover:bg-gray-100',
     destructive: 'bg-red-600 text-white hover:bg-red-700',
+    link: 'text-purple-600 underline-offset-4 hover:underline',
   };
 
   const sizeClasses = {

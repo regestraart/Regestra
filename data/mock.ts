@@ -162,6 +162,10 @@ const saveUserDatabase = (db: User[]) => {
   userDatabase = db;
 };
 
+export const getAllUsers = (): User[] => {
+  return initializeUserDatabase();
+};
+
 export const registerUser = (newUser: Omit<User, 'id'>): User => {
   const db = initializeUserDatabase();
   if (db.some(user => user.email.toLowerCase() === newUser.email.toLowerCase())) {
@@ -398,25 +402,23 @@ export const getRecommendedArtworks = (likedIds: Set<string> | string[]): Artwor
 };
 
 // --- Messaging Mock Data ---
+// Initialize from local storage if available to persist chats across reloads
 let conversations: Conversation[] = [];
 
-export const getConversationsForUser = (userId: string): Conversation[] => {
-  if (conversations.length === 0) {
-      // Init some mock conversations if empty
-      conversations = [
-          {
-              id: 'conv1',
-              participants: ['1', '2'], // Sarah and Alex
-              messages: [
-                  { id: 'm1', senderId: '2', text: "Hi Sarah! I love your 'Abstract Waves' piece.", timestamp: '10:00 AM' },
-                  { id: 'm2', senderId: '1', text: "Thank you so much Alex! Glad you like it.", timestamp: '10:05 AM' }
-              ],
-              lastMessage: "Thank you so much Alex! Glad you like it.",
-              lastMessageTimestamp: '10:05 AM',
-              unreadCount: 0
-          }
-      ];
+try {
+  const storedConvs = localStorage.getItem('conversations');
+  if (storedConvs) {
+    conversations = JSON.parse(storedConvs);
   }
+} catch (e) {
+  console.error("Failed to load conversations", e);
+}
+
+const saveConversations = () => {
+    localStorage.setItem('conversations', JSON.stringify(conversations));
+}
+
+export const getConversationsForUser = (userId: string): Conversation[] => {
   return conversations.filter(c => c.participants.includes(userId));
 };
 
@@ -437,6 +439,8 @@ export const sendMessage = (conversationId: string, senderId: string, text: stri
         conv.messages.push(newMessage);
         conv.lastMessage = text;
         conv.lastMessageTimestamp = newMessage.timestamp;
+        conv.unreadCount = 0;
+        saveConversations();
     }
 };
 
@@ -453,6 +457,7 @@ export const startConversation = (userId1: string, userId2: string): string => {
             unreadCount: 0
         };
         conversations.push(conv);
+        saveConversations();
     }
     return conv.id;
 };
