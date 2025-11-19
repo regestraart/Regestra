@@ -28,7 +28,7 @@ const ArtworkSample: React.FC<{ image: string; index: number }> = ({ image, inde
 };
 
 export default function Landing() {
-  const [visibleCount, setVisibleCount] = useState(20);
+  const [visibleCount, setVisibleCount] = useState(21);
 
   const handleLoadMore = () => {
     // Load all remaining artworks at once

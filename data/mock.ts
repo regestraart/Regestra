@@ -4,6 +4,7 @@
 
 
 
+
 export interface User {
   id: string;
   email: string;
@@ -339,7 +340,7 @@ export const deleteUser = (userId: string) => {
 
 const generateArtworks = (): Artwork[] => {
     const generated: Artwork[] = [];
-    const totalImages = 100; // Keep 100 unique images
+    const totalImages = 60; // Set to 60 unique images
 
     const styles = [
         "abstract expressionism vibrant colors",
@@ -366,16 +367,21 @@ const generateArtworks = (): Artwork[] => {
         const titleAdjective = adjectives[i % adjectives.length];
         const titleNoun = nouns[(i + Math.floor(i / 10)) % nouns.length];
 
+        // Use deterministic values instead of Math.random() to avoid randomization on refresh
+        const artistId = ((i % 5) + 1).toString(); 
+        const likes = 50 + (i * 7) % 500;
+        const commentsCount = (i * 3) % 15;
+
         generated.push({
             id: (i + 1).toString(),
-            artistId: (Math.floor(Math.random() * 5) + 1).toString(), // Ids 1-6
+            artistId: artistId,
             image: `https://image.pollinations.ai/prompt/${prompt}?width=${width}&height=${height}&nologo=true&seed=${i}`,
             title: `${titleAdjective} ${titleNoun} #${i + 1}`,
-            likes: Math.floor(Math.random() * 500) + 25,
+            likes: likes,
             description: `A unique AI generated artwork exploring the themes of ${style}. Created with generative algorithms.`,
             size: 'Digital',
             tags: ["ai-art", "generative", ...style.split(" ").slice(0, 1)],
-            commentsCount: Math.floor(Math.random() * 15)
+            commentsCount: commentsCount
         });
     }
     return generated;
