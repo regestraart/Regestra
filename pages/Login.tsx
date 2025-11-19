@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
-import { Mail, Lock, LoaderCircle, AlertTriangle } from 'lucide-react';
+import { Mail, Lock, LoaderCircle, AlertTriangle, Shield } from 'lucide-react';
 import { useUser } from '../context/UserContext';
 import { authenticateUser } from '../data/mock';
 
@@ -84,6 +84,13 @@ export default function Login() {
             Sign Up
           </Link>
         </p>
+
+        <div className="mt-12 text-center">
+          <Link to="/admin" className="inline-flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            <Shield className="w-3 h-3" />
+            Admin Access
+          </Link>
+        </div>
       </div>
     </div>
   );

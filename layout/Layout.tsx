@@ -16,7 +16,7 @@ export default function Layout() {
   const { currentUser, setCurrentUser } = useUser();
   const isLoggedIn = !!currentUser;
   const isLanding = location.pathname === '/';
-  const isAuthPage = ['/login', '/sign-up', '/forgot-password'].includes(location.pathname);
+  const isAuthPage = ['/login', '/sign-up', '/forgot-password', '/admin'].includes(location.pathname);
   const isHomePage = location.pathname === '/home';
   
   // Initialize to false so new users don't see a red dot by default
@@ -83,14 +83,14 @@ export default function Layout() {
         .animate-slide-up { animation: slide-up 0.3s ease-out forwards; }
         .animate-zoom-in { animation: zoom-in 0.2s ease-out forwards; }
       `}} />
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <Logo />
-            </div>
+      {!isAuthPage && (
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center gap-3">
+                <Logo />
+              </div>
 
-            {!isAuthPage && (
               <>
                 {isLoggedIn && currentUser ? (
                   <div className="flex items-center gap-6">
@@ -147,10 +147,10 @@ export default function Layout() {
                   </nav>
                 )}
               </>
-            )}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
       
       <main>
         <Outlet />
