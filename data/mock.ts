@@ -5,6 +5,17 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 export interface User {
   id: string;
   email: string;
@@ -54,6 +65,8 @@ export interface Message {
   senderId: string;
   text: string;
   timestamp: string;
+  timestampRaw: number; // For sorting
+  isHidden?: boolean;
 }
 
 export interface Conversation {
@@ -61,8 +74,10 @@ export interface Conversation {
   participants: string[]; // User IDs
   messages: Message[];
   lastMessage: string;
-  lastMessageTimestamp: string;
-  unreadCount: number;
+  lastMessageTimestamp: number; // Changed to number for easier sorting
+  unreadCount: number; // View property for UI
+  unreadCounts?: Record<string, number>; // Storage property for per-user counts
+  isHidden?: boolean; // Dynamically added property
 }
 
 export interface CollectionArtwork {
@@ -100,10 +115,23 @@ export interface SocialPost {
   comments: Comment[];
 }
 
+export interface Notification {
+  id: string;
+  userId: string; // Recipient
+  type: 'like' | 'comment' | 'follow';
+  actorId: string; // Who performed the action
+  actorName: string;
+  actorAvatar: string;
+  contentPreview?: string; // Snippet of comment or post
+  time: string;
+  unread: boolean;
+  timestamp: number;
+}
+
 // New Interface for Feed Items
 export type FeedItem = 
-  | { type: 'post'; data: SocialPost }
-  | { type: 'recommendation'; data: Artwork; reason: string };
+  | { type: 'post'; data: SocialPost; isHidden?: boolean }
+  | { type: 'recommendation'; data: Artwork; reason: string; isHidden?: boolean };
 
 // --- LocalStorage User Database ---
 const initialUsers: User[] = [
@@ -159,20 +187,158 @@ const initialUsers: User[] = [
 
 let userDatabase: User[] | null = null;
 
+// --- Notification System ---
+let notifications: Notification[] = [];
+
+try {
+  const storedNotifs = localStorage.getItem('notifications');
+  if (storedNotifs) {
+    notifications = JSON.parse(storedNotifs);
+  }
+} catch (e) {
+  console.error("Failed to load notifications", e);
+  notifications = [];
+}
+
+const saveNotifications = () => {
+  localStorage.setItem('notifications', JSON.stringify(notifications));
+};
+
+export const createNotification = (recipientId: string, type: 'like' | 'comment' | 'follow', actorId: string, contentPreview?: string) => {
+  if (recipientId === actorId) return; // Don't notify self
+  
+  const actor = findUserById(actorId);
+  if (!actor) return;
+
+  const newNotif: Notification = {
+    id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    userId: recipientId,
+    type,
+    actorId,
+    actorName: actor.name,
+    actorAvatar: actor.avatar,
+    contentPreview,
+    time: "Just now",
+    unread: true,
+    timestamp: Date.now()
+  };
+  
+  notifications.unshift(newNotif);
+  saveNotifications();
+};
+
+export const getNotificationsForUser = (userId: string): Notification[] => {
+  return notifications
+    .filter(n => n.userId === userId)
+    .sort((a, b) => b.timestamp - a.timestamp);
+};
+
+export const getUnreadNotificationCount = (userId: string): number => {
+  return notifications.filter(n => n.userId === userId && n.unread).length;
+};
+
+export const markNotificationsAsRead = (userId: string) => {
+  let changed = false;
+  notifications = notifications.map(n => {
+    if (n.userId === userId && n.unread) {
+      changed = true;
+      return { ...n, unread: false };
+    }
+    return n;
+  });
+  if (changed) saveNotifications();
+};
+
+export const deleteNotification = (id: string) => {
+  notifications = notifications.filter(n => n.id !== id);
+  saveNotifications();
+};
+
+export const clearAllNotifications = (userId: string) => {
+  notifications = notifications.filter(n => n.userId !== userId);
+  saveNotifications();
+};
+
+
 // --- Interaction Tracking System ---
 // Stores weighted interests based on user actions
 interface UserInteractions {
   tags: Record<string, number>; // tag -> score
   artistIds: Record<string, number>; // artistId -> score
   viewedArtworks: Set<string>;
+  dismissedRecommendations: Set<string>; // Permanently deleted/dismissed
+  hiddenPostIds: Set<string>; // Temporarily hidden posts
+  hiddenArtworkIds: Set<string>; // Temporarily hidden artworks
+  hiddenConversationIds: Set<string>;
+  deletedConversationIds: Set<string>;
+  hiddenMessageIds: Set<string>;
+  conversationClearedAt: Record<string, number>; // conversationId -> timestamp
 }
 
-// Mock in-memory storage for interactions (reset on reload in this demo, but could be LS)
+// Mock in-memory storage for interactions
 const userInteractionsMap: Record<string, UserInteractions> = {};
+let isInteractionsLoaded = false;
+
+const saveInteractions = () => {
+  const serialized: Record<string, any> = {};
+  Object.entries(userInteractionsMap).forEach(([userId, data]) => {
+    serialized[userId] = {
+      ...data,
+      viewedArtworks: Array.from(data.viewedArtworks),
+      dismissedRecommendations: Array.from(data.dismissedRecommendations),
+      hiddenPostIds: Array.from(data.hiddenPostIds),
+      hiddenArtworkIds: Array.from(data.hiddenArtworkIds),
+      hiddenConversationIds: Array.from(data.hiddenConversationIds),
+      deletedConversationIds: Array.from(data.deletedConversationIds),
+      hiddenMessageIds: Array.from(data.hiddenMessageIds),
+      conversationClearedAt: data.conversationClearedAt || {}
+    };
+  });
+  localStorage.setItem('userInteractions', JSON.stringify(serialized));
+};
+
+const loadInteractions = () => {
+    if (isInteractionsLoaded) return;
+    
+    const stored = localStorage.getItem('userInteractions');
+    if (stored) {
+        try {
+            const parsed = JSON.parse(stored);
+            Object.entries(parsed).forEach(([uId, data]: [string, any]) => {
+                userInteractionsMap[uId] = {
+                    ...data,
+                    viewedArtworks: new Set(data.viewedArtworks || []),
+                    dismissedRecommendations: new Set(data.dismissedRecommendations || []),
+                    hiddenPostIds: new Set(data.hiddenPostIds || []),
+                    hiddenArtworkIds: new Set(data.hiddenArtworkIds || []),
+                    hiddenConversationIds: new Set(data.hiddenConversationIds || []),
+                    deletedConversationIds: new Set(data.deletedConversationIds || []),
+                    hiddenMessageIds: new Set(data.hiddenMessageIds || []),
+                    conversationClearedAt: data.conversationClearedAt || {}
+                };
+            });
+        } catch(e) { console.error("Error parsing interactions", e); }
+    }
+    isInteractionsLoaded = true;
+};
+
 
 const getUserInteractions = (userId: string): UserInteractions => {
+  loadInteractions();
+  
   if (!userInteractionsMap[userId]) {
-    userInteractionsMap[userId] = { tags: {}, artistIds: {}, viewedArtworks: new Set() };
+    userInteractionsMap[userId] = { 
+      tags: {}, 
+      artistIds: {}, 
+      viewedArtworks: new Set(),
+      dismissedRecommendations: new Set(),
+      hiddenPostIds: new Set(),
+      hiddenArtworkIds: new Set(),
+      hiddenConversationIds: new Set(),
+      deletedConversationIds: new Set(),
+      hiddenMessageIds: new Set(),
+      conversationClearedAt: {}
+    };
   }
   return userInteractionsMap[userId];
 };
@@ -197,6 +363,34 @@ export const recordInteraction = (userId: string, artworkId: string, type: 'view
 
   // Mark view
   if (type === 'view') interactions.viewedArtworks.add(artworkId);
+  
+  saveInteractions();
+};
+
+export const dismissRecommendation = (userId: string, artworkId: string) => {
+  const interactions = getUserInteractions(userId);
+  interactions.dismissedRecommendations.add(artworkId);
+  saveInteractions();
+};
+
+export const toggleHideSocialPost = (userId: string, postId: string) => {
+    const interactions = getUserInteractions(userId);
+    if (interactions.hiddenPostIds.has(postId)) {
+        interactions.hiddenPostIds.delete(postId);
+    } else {
+        interactions.hiddenPostIds.add(postId);
+    }
+    saveInteractions();
+};
+
+export const toggleHideRecommendation = (userId: string, artworkId: string) => {
+    const interactions = getUserInteractions(userId);
+    if (interactions.hiddenArtworkIds.has(artworkId)) {
+        interactions.hiddenArtworkIds.delete(artworkId);
+    } else {
+        interactions.hiddenArtworkIds.add(artworkId);
+    }
+    saveInteractions();
 };
 
 
@@ -277,9 +471,6 @@ export const toggleFollowUser = (currentUserId: string, targetUserId: string): U
         stats: {
             ...user.stats,
             following: newFollowing.length,
-            // In a mutual connect model, 'followers' usually implies connections too, 
-            // but we will just increment both for symmetry or keep them independent if we view it as "friends"
-            // Let's increment both following/followers to simulate "Connections" count increasing
             followers: isConnected ? Math.max(0, user.stats.followers - 1) : user.stats.followers + 1
         }
       };
@@ -306,6 +497,12 @@ export const toggleFollowUser = (currentUserId: string, targetUserId: string): U
   });
 
   saveUserDatabase(newDb);
+  
+  // Trigger Notification for the Target User only when connecting (not disconnecting)
+  if (!isConnected) {
+    createNotification(targetUserId, 'follow', currentUserId);
+  }
+
   return newDb.find(u => u.id === currentUserId)!;
 };
 
@@ -487,17 +684,22 @@ export const getMixedFeed = (userId: string): FeedItem[] => {
   const currentUser = findUserById(userId);
   if (!currentUser) return [];
 
+  const interactions = getUserInteractions(userId);
+
   // 1. Get Social Posts from Connected Users & Self
   // Users see posts from people they follow, plus their own posts.
   const allowedAuthorIds = [...(currentUser.followingIds || []), currentUser.id];
   
   const relevantPosts: FeedItem[] = socialPosts
     .filter(post => allowedAuthorIds.includes(post.authorId))
-    .map(post => ({ type: 'post', data: post }));
+    .map(post => ({ 
+        type: 'post', 
+        data: post,
+        isHidden: interactions.hiddenPostIds.has(post.id)
+    }));
 
   // 2. Get Artwork Recommendations
   // Based on simple scoring algorithm from UserInteractions
-  const interactions = getUserInteractions(userId);
   
   // Calculate scores for all artworks
   const scoredArtworks = artworks.map(art => {
@@ -532,20 +734,30 @@ export const getMixedFeed = (userId: string): FeedItem[] => {
     return { art, score, reason };
   });
 
-  // Filter out artworks with 0 score (unless we need filler) and sort
+  // Filter out dismissed items (Permanently deleted from feed)
+  // We still include HIDDEN items here, but mark them as hidden.
   const topRecommendations = scoredArtworks
-    .filter(item => item.score > 0)
+    .filter(item => item.score > 0 && !interactions.dismissedRecommendations.has(item.art.id))
     .sort((a, b) => b.score - a.score)
     .slice(0, 5) // Take top 5 recommendations
-    .map(item => ({ type: 'recommendation' as const, data: item.art, reason: item.reason }));
+    .map(item => ({ 
+        type: 'recommendation' as const, 
+        data: item.art, 
+        reason: item.reason,
+        isHidden: interactions.hiddenArtworkIds.has(item.art.id)
+    }));
 
   // If no recommendations (new user), allow some random popular ones
   if (topRecommendations.length === 0) {
-     const randomPicks = artworks.slice(0, 3).map(art => ({
-       type: 'recommendation' as const, 
-       data: art, 
-       reason: "Popular on Regestra"
-     }));
+     const randomPicks = artworks
+        .filter(art => !interactions.dismissedRecommendations.has(art.id))
+        .slice(0, 3)
+        .map(art => ({
+            type: 'recommendation' as const, 
+            data: art, 
+            reason: "Popular on Regestra",
+            isHidden: interactions.hiddenArtworkIds.has(art.id)
+        }));
      topRecommendations.push(...randomPicks);
   }
 
@@ -587,17 +799,30 @@ export const createSocialPost = (userId: string, content: string, image?: string
     return newPost;
 };
 
+export const deleteSocialPost = (postId: string) => {
+    socialPosts = socialPosts.filter(p => p.id !== postId);
+    saveSocialPosts();
+};
+
 export const toggleLikeSocialPost = (postId: string, userId: string): SocialPost[] => {
     socialPosts = socialPosts.map(post => {
         if (post.id === postId) {
             const likes = new Set(post.likes);
+            let action = 'unlike';
             if (likes.has(userId)) {
                 likes.delete(userId);
             } else {
                 likes.add(userId);
+                action = 'like';
             }
             // Record interaction
             recordInteraction(userId, "social_interaction", 'like'); // Generic interaction
+            
+            // Notify author
+            if (action === 'like') {
+               createNotification(post.authorId, 'like', userId, post.content || "your post");
+            }
+
             return { ...post, likes: Array.from(likes) };
         }
         return post;
@@ -615,6 +840,9 @@ export const addCommentToSocialPost = (postId: string, userId: string, text: str
                 text,
                 timestamp: "Just now"
             };
+            
+            createNotification(post.authorId, 'comment', userId, text);
+            
             return { ...post, comments: [...post.comments, newComment] };
         }
         return post;
@@ -640,27 +868,87 @@ const saveConversations = () => {
 }
 
 export const getConversationsForUser = (userId: string): Conversation[] => {
-  return conversations.filter(c => c.participants.includes(userId));
+  const interactions = getUserInteractions(userId);
+  const clearedAt = interactions.conversationClearedAt;
+  
+  return conversations
+    .filter(c => c.participants.includes(userId))
+    .filter(c => !interactions.deletedConversationIds.has(c.id)) // Filter out deleted conversations
+    .map(c => {
+        // Check if conversation was cleared. If so, hide messages before that time.
+        const clearTime = clearedAt[c.id] || 0;
+        
+        // If last message is older than clear time, it looks like an empty/new chat
+        let displayLastMessage = c.lastMessage;
+        
+        if (c.lastMessageTimestamp < clearTime) {
+            displayLastMessage = '';
+        }
+
+        // Calculate user-specific unread count
+        const userUnreadCount = c.unreadCounts ? (c.unreadCounts[userId] || 0) : 0;
+        
+        return {
+            ...c,
+            lastMessage: displayLastMessage,
+            unreadCount: userUnreadCount, // Override global count with user-specific count
+            isHidden: interactions.hiddenConversationIds.has(c.id)
+        };
+    })
+    .sort((a, b) => b.lastMessageTimestamp - a.lastMessageTimestamp); // Ensure newest on top
 };
 
-export const getMessagesForConversation = (conversationId: string): Message[] => {
+export const getMessagesForConversation = (conversationId: string, userId?: string): Message[] => {
     const conv = conversations.find(c => c.id === conversationId);
-    return conv ? conv.messages : [];
+    if (!conv) return [];
+    
+    if (userId) {
+        const interactions = getUserInteractions(userId);
+        const clearedAt = interactions.conversationClearedAt[conversationId] || 0;
+        
+        return conv.messages
+            .filter(m => m.timestampRaw > clearedAt) // Filter out cleared history
+            .map(m => ({
+                ...m,
+                isHidden: interactions.hiddenMessageIds.has(m.id)
+            }));
+    }
+    
+    return conv.messages;
 };
 
 export const sendMessage = (conversationId: string, senderId: string, text: string) => {
     const conv = conversations.find(c => c.id === conversationId);
     if (conv) {
+        const now = Date.now();
         const newMessage: Message = {
-            id: `m${Date.now()}`,
+            id: `m${now}`,
             senderId,
             text,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestampRaw: now
         };
         conv.messages.push(newMessage);
         conv.lastMessage = text;
-        conv.lastMessageTimestamp = newMessage.timestamp;
-        conv.unreadCount = 0;
+        conv.lastMessageTimestamp = now;
+        
+        // Initialize unreadCounts if needed and increment for recipients
+        if (!conv.unreadCounts) conv.unreadCounts = {};
+        conv.participants.forEach(pId => {
+            if (pId !== senderId) {
+                conv.unreadCounts![pId] = (conv.unreadCounts![pId] || 0) + 1;
+            }
+        });
+
+        saveConversations();
+    }
+};
+
+export const markConversationAsRead = (conversationId: string, userId: string) => {
+    const conv = conversations.find(c => c.id === conversationId);
+    if (conv) {
+        if (!conv.unreadCounts) conv.unreadCounts = {};
+        conv.unreadCounts[userId] = 0;
         saveConversations();
     }
 };
@@ -673,11 +961,71 @@ export const startConversation = (userId1: string, userId2: string): string => {
             participants: [userId1, userId2],
             messages: [],
             lastMessage: '',
-            lastMessageTimestamp: '',
-            unreadCount: 0
+            lastMessageTimestamp: Date.now(),
+            unreadCount: 0,
+            unreadCounts: {}
         };
         conversations.push(conv);
         saveConversations();
     }
+    // If it was deleted/cleared, we might want to revive it? 
+    // For now, if the user deleted it, it will reappear because we filter based on ID in getConversations.
+    // But we should probably remove it from the deleted set if they start it again.
+    const interactions1 = getUserInteractions(userId1);
+    if (interactions1.deletedConversationIds.has(conv.id)) {
+        interactions1.deletedConversationIds.delete(conv.id);
+        saveInteractions();
+    }
+    
     return conv.id;
+};
+
+export const toggleHideConversation = (userId: string, conversationId: string) => {
+    const interactions = getUserInteractions(userId);
+    if (interactions.hiddenConversationIds.has(conversationId)) {
+        interactions.hiddenConversationIds.delete(conversationId);
+    } else {
+        interactions.hiddenConversationIds.add(conversationId);
+    }
+    saveInteractions();
+};
+
+export const deleteConversationForUser = (userId: string, conversationId: string) => {
+    const interactions = getUserInteractions(userId);
+    
+    // 1. Mark as deleted (hides from list)
+    interactions.deletedConversationIds.add(conversationId);
+    
+    // 2. Set clear timestamp to NOW. This ensures that if they rejoin the chat,
+    // they don't see history prior to this moment.
+    interactions.conversationClearedAt[conversationId] = Date.now();
+    
+    saveInteractions();
+};
+
+export const toggleHideMessage = (userId: string, messageId: string) => {
+    const interactions = getUserInteractions(userId);
+    if (interactions.hiddenMessageIds.has(messageId)) {
+        interactions.hiddenMessageIds.delete(messageId);
+    } else {
+        interactions.hiddenMessageIds.add(messageId);
+    }
+    saveInteractions();
+};
+
+export const deleteMessage = (conversationId: string, messageId: string) => {
+    const conv = conversations.find(c => c.id === conversationId);
+    if (conv) {
+        conv.messages = conv.messages.filter(m => m.id !== messageId);
+        // Update last message if needed
+        if (conv.messages.length > 0) {
+            const lastMsg = conv.messages[conv.messages.length - 1];
+            conv.lastMessage = lastMsg.text;
+            conv.lastMessageTimestamp = lastMsg.timestampRaw;
+        } else {
+            conv.lastMessage = '';
+            conv.lastMessageTimestamp = Date.now();
+        }
+        saveConversations();
+    }
 };

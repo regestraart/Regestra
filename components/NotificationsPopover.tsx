@@ -1,19 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, UserPlus, X, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
-
-interface Notification {
-  id: number;
-  type: 'like' | 'comment' | 'follow';
-  user: { name: string; avatar: string };
-  artworkTitle?: string;
-  comment?: string;
-  time: string;
-  unread: boolean;
-}
-
-// Start with empty notifications so new users have a clean slate
-let initialNotifications: Notification[] = [];
+import { useUser } from '../context/UserContext';
+import { 
+  getNotificationsForUser, 
+  deleteNotification, 
+  clearAllNotifications, 
+  markNotificationsAsRead,
+  Notification
+} from '../data/mock';
 
 const NotificationIcon = ({ type }: { type: string }) => {
   switch (type) {
@@ -24,19 +19,34 @@ const NotificationIcon = ({ type }: { type: string }) => {
   }
 };
 
-const NotificationsPopover = () => {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+const NotificationsPopover = ({ onClose }: { onClose: () => void }) => {
+  const { currentUser } = useUser();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const handleDelete = (id: number) => {
-    const updated = notifications.filter(n => n.id !== id);
-    setNotifications(updated);
-    initialNotifications = updated; // Persist within session
+  useEffect(() => {
+    if (currentUser) {
+      // Load notifications
+      const items = getNotificationsForUser(currentUser.id);
+      setNotifications(items);
+      
+      // Mark as read when opening the popover
+      markNotificationsAsRead(currentUser.id);
+    }
+  }, [currentUser]);
+
+  const handleDelete = (id: string) => {
+    deleteNotification(id);
+    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   const handleClearAll = () => {
-    setNotifications([]);
-    initialNotifications = [];
+    if (currentUser) {
+      clearAllNotifications(currentUser.id);
+      setNotifications([]);
+    }
   };
+
+  if (!currentUser) return null;
 
   return (
     <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-50 animate-in fade-in zoom-in duration-200">
@@ -56,17 +66,21 @@ const NotificationsPopover = () => {
           notifications.map(notification => (
             <div key={notification.id} className={`p-4 flex items-start gap-3 hover:bg-gray-50 group relative ${notification.unread ? 'bg-purple-50' : ''}`}>
               <div className="relative">
-                <img src={notification.user.avatar} alt={notification.user.name} className="w-10 h-10 rounded-full" />
+                <img src={notification.actorAvatar} alt={notification.actorName} className="w-10 h-10 rounded-full object-cover" />
                 <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
                     <NotificationIcon type={notification.type} />
                 </div>
               </div>
               <div className="flex-1 text-sm pr-6">
                 <p className="text-gray-800">
-                  <span className="font-semibold">{notification.user.name}</span>
-                  {notification.type === 'like' && ` liked your artwork: "${notification.artworkTitle}"`}
-                  {notification.type === 'comment' && ` commented: "${notification.comment}"`}
-                  {notification.type === 'follow' && ` started following you.`}
+                  <span className="font-semibold">{notification.actorName}</span>
+                  {notification.type === 'like' && (
+                    <span> liked {notification.contentPreview ? `"${notification.contentPreview.substring(0, 30)}${notification.contentPreview.length > 30 ? '...' : ''}"` : 'your post'}</span>
+                  )}
+                  {notification.type === 'comment' && (
+                    <span> commented: "{notification.contentPreview}"</span>
+                  )}
+                  {notification.type === 'follow' && ` connected with you.`}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
               </div>

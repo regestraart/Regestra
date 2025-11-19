@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { createUrl } from "../utils";
@@ -9,6 +11,7 @@ import { Input } from "../components/ui/Input";
 import { useUser } from "../context/UserContext";
 import NotificationsPopover from "../components/NotificationsPopover";
 import ProfileDropdown from "../components/ProfileDropdown";
+import { getUnreadNotificationCount } from "../data/mock";
 
 export default function Layout() {
   const location = useLocation();
@@ -19,12 +22,22 @@ export default function Layout() {
   const isAuthPage = ['/login', '/sign-up', '/forgot-password'].includes(location.pathname);
   const isHomePage = location.pathname === '/home';
   
+  // Initialize to false so new users don't see a red dot by default
   const [showNotifications, setShowNotifications] = useState(false);
-  const [hasUnread, setHasUnread] = useState(true);
+  const [hasUnread, setHasUnread] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
   
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (currentUser) {
+      const unreadCount = getUnreadNotificationCount(currentUser.id);
+      setHasUnread(unreadCount > 0);
+    } else {
+      setHasUnread(false);
+    }
+  }, [currentUser, location.pathname]); // Re-check on navigation as well
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -41,7 +54,8 @@ export default function Layout() {
   
   const handleBellClick = () => {
     setShowNotifications(prev => !prev);
-    if (hasUnread) {
+    // Optimistically clear unread indicator when opening
+    if (!showNotifications && hasUnread) {
       setHasUnread(false);
     }
   };
@@ -100,7 +114,7 @@ export default function Layout() {
                           <Bell className="w-5 h-5" />
                           {hasUnread && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-purple-600 rounded-full"></span>}
                         </Button>
-                        {showNotifications && <NotificationsPopover />}
+                        {showNotifications && <NotificationsPopover onClose={() => setShowNotifications(false)} />}
                       </div>
                       <Link to="/messages">
                         <Button variant="ghost" size="icon" className="rounded-full" aria-label="Messages">

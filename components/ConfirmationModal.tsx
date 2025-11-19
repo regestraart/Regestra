@@ -48,12 +48,12 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ onClose, onConfir
           </Button>
         </div>
       </div>
-      <style>{`
+      <style dangerouslySetInnerHTML={{__html: `
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slide-up { from { transform: scale(0.95) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
         .animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
         .animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      `}</style>
+      `}} />
     </div>
   );
 };

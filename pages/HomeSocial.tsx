@@ -1,11 +1,7 @@
 
-
-
-
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Image as ImageIcon, Send, X, LoaderCircle, Trash2, Sparkles, UserPlus } from "lucide-react";
+import { Heart, MessageCircle, Image as ImageIcon, Send, X, LoaderCircle, Trash2, Sparkles, UserPlus, Eye, EyeOff, MoreVertical } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Textarea } from "../components/ui/Textarea";
@@ -20,7 +16,11 @@ import {
   addCommentToSocialPost,
   findUserById,
   Artwork,
-  recordInteraction
+  recordInteraction,
+  deleteSocialPost,
+  dismissRecommendation,
+  toggleHideSocialPost,
+  toggleHideRecommendation
 } from "../data/mock";
 import { useImageEnhancer } from "../hooks/useImageEnhancer";
 import ArtworkDetailModal from "../components/ArtworkDetailModal";
@@ -28,18 +28,63 @@ import ArtworkDetailModal from "../components/ArtworkDetailModal";
 const RecommendedArtworkCard: React.FC<{ 
   artwork: Artwork; 
   reason: string; 
-  onView: (art: Artwork) => void 
-}> = ({ artwork, reason, onView }) => {
+  isHidden?: boolean;
+  onView: (art: Artwork) => void;
+  onDelete: () => void;
+  onHide: () => void;
+  isMenuOpen: boolean;
+  onToggleMenu: (e: React.MouseEvent) => void;
+}> = ({ artwork, reason, isHidden, onView, onDelete, onHide, isMenuOpen, onToggleMenu }) => {
   const artist = findUserById(artwork.artistId);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden animate-fade-in border border-purple-100">
+    <div className={`bg-white rounded-2xl shadow-sm overflow-hidden animate-fade-in border border-purple-100 ${isHidden ? 'opacity-60 grayscale bg-gray-50' : ''}`}>
       <div className="p-4 border-b border-purple-50 bg-purple-50/50 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-purple-700 font-medium">
-          <Sparkles className="w-4 h-4" />
-          <span>Suggested for you</span>
+          {isHidden ? (
+            <>
+              <EyeOff className="w-4 h-4" />
+              <span>Hidden Recommendation</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              <span>Suggested for you</span>
+            </>
+          )}
         </div>
-        <span className="text-xs text-gray-500">{reason}</span>
+        <div className="flex items-center gap-2">
+            {!isHidden && <span className="text-xs text-gray-500">{reason}</span>}
+            
+            <div className="relative">
+                <button 
+                    onClick={onToggleMenu}
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-1.5 hover:bg-purple-50 rounded-full"
+                    aria-label="More options"
+                >
+                    <MoreVertical className="w-4 h-4" />
+                </button>
+                
+                {isMenuOpen && (
+                    <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onHide(); }}
+                            className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        >
+                            {isHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                            {isHidden ? "Unhide" : "Hide"}
+                        </button>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onDelete(); }} 
+                            className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Dismiss
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
       </div>
       <div className="p-4">
         <div className="flex items-center gap-3 mb-3">
@@ -78,6 +123,8 @@ const RecommendedArtworkCard: React.FC<{
 export default function HomeSocial() {
   const { currentUser } = useUser();
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const [showHiddenContent, setShowHiddenContent] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   
   // Create Post State
   const [newPostContent, setNewPostContent] = useState("");
@@ -91,10 +138,16 @@ export default function HomeSocial() {
   const [selectedArtwork, setSelectedArtwork] = useState<Artwork | null>(null);
 
   useEffect(() => {
+    const handleClickOutside = () => setActiveMenuId(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
     if (currentUser) {
       loadFeed();
     }
-  }, [currentUser]);
+  }, [currentUser, showHiddenContent]); // Reload if user or toggle changes
 
   // Sync enhanced image from hook to local state for preview
   useEffect(() => {
@@ -142,6 +195,38 @@ export default function HomeSocial() {
     loadFeed();
   };
 
+  const handleDeletePost = (postId: string) => {
+    if (confirm("Are you sure you want to delete this post?")) {
+        deleteSocialPost(postId);
+        loadFeed();
+    }
+    setActiveMenuId(null);
+  };
+
+  const handleHidePost = (postId: string) => {
+      if (currentUser) {
+          toggleHideSocialPost(currentUser.id, postId);
+          loadFeed();
+      }
+      setActiveMenuId(null);
+  }
+
+  const handleHideRecommendation = (artworkId: string) => {
+      if (currentUser) {
+          toggleHideRecommendation(currentUser.id, artworkId);
+          loadFeed();
+      }
+      setActiveMenuId(null);
+  }
+
+  const handleDismissRecommendation = (artworkId: string) => {
+      if (currentUser) {
+          dismissRecommendation(currentUser.id, artworkId);
+          loadFeed();
+      }
+      setActiveMenuId(null);
+  };
+
   const handleLike = (postId: string) => {
     if (!currentUser) return;
     toggleLikeSocialPost(postId, currentUser.id);
@@ -169,7 +254,7 @@ export default function HomeSocial() {
         
         {/* Create Post Card */}
         {currentUser ? (
-          <div className="bg-white rounded-2xl shadow-sm p-4 mb-8">
+          <div className="bg-white rounded-2xl shadow-sm p-4 mb-6">
             <div className="flex gap-4">
               <img 
                 src={currentUser.avatar} 
@@ -245,6 +330,21 @@ export default function HomeSocial() {
             </div>
           </div>
         )}
+        
+        {/* Feed Controls */}
+        {currentUser && (
+            <div className="flex justify-end mb-4">
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className={`text-xs gap-2 rounded-full ${showHiddenContent ? 'bg-purple-100 text-purple-700' : 'text-gray-500'}`}
+                    onClick={() => setShowHiddenContent(prev => !prev)}
+                >
+                    {showHiddenContent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showHiddenContent ? 'Hide Hidden Content' : 'Show Hidden Content'}
+                </Button>
+            </div>
+        )}
 
         {/* Feed */}
         <div className="space-y-6">
@@ -255,17 +355,29 @@ export default function HomeSocial() {
           )}
 
           {feedItems.map((item, index) => {
+            // Hide items if toggle is off
+            if (!showHiddenContent && item.isHidden) return null;
+
             // RENDER RECOMMENDATION
             if (item.type === 'recommendation') {
+              const menuId = `rec-${item.data.id}`;
               return (
                 <RecommendedArtworkCard 
-                  key={`rec-${item.data.id}-${index}`}
+                  key={`${menuId}-${index}`}
                   artwork={item.data}
                   reason={item.reason}
+                  isHidden={item.isHidden}
                   onView={(art) => {
                     // Record view immediately
                     if(currentUser) recordInteraction(currentUser.id, art.id, 'view');
                     setSelectedArtwork(art);
+                  }}
+                  onDelete={() => handleDismissRecommendation(item.data.id)}
+                  onHide={() => handleHideRecommendation(item.data.id)}
+                  isMenuOpen={activeMenuId === menuId}
+                  onToggleMenu={(e) => {
+                      e.stopPropagation();
+                      setActiveMenuId(activeMenuId === menuId ? null : menuId);
                   }}
                 />
               );
@@ -277,9 +389,11 @@ export default function HomeSocial() {
             if (!author) return null;
             
             const isLiked = currentUser ? post.likes.includes(currentUser.id) : false;
+            const isAuthor = currentUser?.id === post.authorId;
+            const menuId = `post-${post.id}`;
 
             return (
-              <div key={post.id} className="bg-white rounded-2xl shadow-sm overflow-hidden animate-fade-in">
+              <div key={post.id} className={`bg-white rounded-2xl shadow-sm overflow-hidden animate-fade-in ${item.isHidden ? 'opacity-60 grayscale bg-gray-50' : ''}`}>
                 {/* Header */}
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
@@ -287,11 +401,55 @@ export default function HomeSocial() {
                       <img src={author.avatar} alt={author.name} className="w-10 h-10 rounded-full object-cover" />
                     </Link>
                     <div>
-                      <Link to={createUrl('/profile/:userId', { userId: author.id })}>
-                        <p className="font-semibold text-gray-900 hover:underline">{author.name}</p>
-                      </Link>
+                      <div className="flex items-center gap-2">
+                          <Link to={createUrl('/profile/:userId', { userId: author.id })}>
+                            <p className="font-semibold text-gray-900 hover:underline">{author.name}</p>
+                          </Link>
+                          {item.isHidden && <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Hidden</span>}
+                      </div>
                       <p className="text-xs text-gray-500">{post.timestampStr}</p>
                     </div>
+                  </div>
+                  
+                  <div className="relative">
+                      <button 
+                          onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuId(activeMenuId === menuId ? null : menuId);
+                          }}
+                          className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
+                          aria-label="More options"
+                      >
+                          <MoreVertical className="w-5 h-5" />
+                      </button>
+                      
+                      {activeMenuId === menuId && (
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-10 animate-in fade-in zoom-in-95 duration-100">
+                               <button
+                                  onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleHidePost(post.id);
+                                  }}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                              >
+                                  {item.isHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                  {item.isHidden ? "Unhide Post" : "Hide Post"}
+                              </button>
+
+                              {isAuthor && (
+                                  <button
+                                      onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeletePost(post.id);
+                                      }}
+                                      className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                  >
+                                      <Trash2 className="w-4 h-4" />
+                                      Delete Post
+                                  </button>
+                              )}
+                          </div>
+                      )}
                   </div>
                 </div>
 

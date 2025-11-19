@@ -1,6 +1,4 @@
 
-
-
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { X, Heart, MessageCircle, Trash2 } from 'lucide-react';
@@ -172,7 +170,7 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
           </div>
         </div>
       </div>
-      <style>{`
+      <style dangerouslySetInnerHTML={{__html: `
         @keyframes fade-in {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -183,7 +181,7 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
         }
         .animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
         .animate-slide-up { animation: slide-up 0.3s ease-out forwards; }
-      `}</style>
+      `}} />
     </div>
      {showDeleteConfirm && onDelete && (
         <ConfirmationModal 
