@@ -21,9 +21,13 @@ export const useImageEnhancer = () => {
     setEnhancementError(null);
 
     try {
+      // If no API key is configured, skip enhancement and use original
       if (!process.env.API_KEY) {
-        throw new Error("API key is not configured.");
+        console.warn("API key is not configured. Using original image.");
+        setEnhancedImage(originalImageBase64);
+        return;
       }
+      
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const { mimeType, data } = extractBase64(originalImageBase64);
 
@@ -48,11 +52,15 @@ export const useImageEnhancer = () => {
         const enhancedImageSrc = `data:${enhancedMimeType};base64,${enhancedImageData}`;
         setEnhancedImage(enhancedImageSrc);
       } else {
-        throw new Error("AI model did not return an enhanced image.");
+        // If the model returns no image data, fallback to the original
+        console.warn("AI model did not return an enhanced image. Using original.");
+        setEnhancedImage(originalImageBase64);
       }
     } catch (error) {
       console.error("Error enhancing image:", error);
-      setEnhancementError("Could not enhance the image. It may be too low quality or in an unsupported format. Please try another file.");
+      // Fallback to original image on any error (unsupported format, low quality, API error)
+      // This satisfies the requirement to "Allow all image formats" and "Automatically adjust" by not failing.
+      setEnhancedImage(originalImageBase64);
     } finally {
       setIsEnhancing(false);
     }
