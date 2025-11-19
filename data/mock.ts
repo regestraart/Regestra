@@ -16,6 +16,8 @@
 
 
 
+
+
 export interface User {
   id: string;
   email: string;
@@ -151,7 +153,7 @@ const initialUsers: User[] = [
     commissionStatus: 'Open',
     contactEmail: 'hello@sarahchen.art',
     socials: { instagram: 'sarahchen.art', twitter: 'sarahchen', behance: 'sarahchen' },
-    stats: { artworks: 3, followers: 1234, following: 567 },
+    stats: { artworks: 3, followers: 1234, following: 567, liked: 1 },
     likedArtworkIds: ['2'],
     followingIds: ['3', '4']
   },
@@ -167,7 +169,7 @@ const initialUsers: User[] = [
     bio: "Lover of all things abstract and colorful. Building my personal collection one piece at a time.",
     location: "New York, NY",
     joinDate: "March 2023",
-    stats: { liked: 152, collections: 1, following: 89, followers: 120 },
+    stats: { liked: 3, collections: 1, following: 89, followers: 120 },
     likedArtworkIds: ['1', '5', '6'],
     followingIds: ['1'],
     collections: [
@@ -180,9 +182,9 @@ const initialUsers: User[] = [
         }
     ]
   },
-  { id: '3', email: 'marcus@test.com', password: 'password123', role: 'artist', name: "Marcus Williams", username: "marcusart", avatar: "https://i.pravatar.cc/150?img=2", bio: "Surreal artist exploring the urban dreamscape.", joinDate: "Feb 2023", stats: { artworks: 1, followers: 800, following: 300 }, likedArtworkIds: [], followingIds: [] },
-  { id: '4', email: 'emma@test.com', password: 'password123', role: 'artist', name: "Emma Rodriguez", username: "emmacreates", avatar: "https://i.pravatar.cc/150?img=3", bio: "Painter obsessed with color and texture.", joinDate: "April 2023", stats: { artworks: 1, followers: 2500, following: 450 }, likedArtworkIds: [], followingIds: [] },
-  { id: '5', email: 'lisa@test.com', password: 'password123', role: 'artist', name: "Lisa Thompson", username: "lisadesigns", avatar: "https://i.pravatar.cc/150?img=5", bio: "Minimalist illustrator creating geometric wonders.", joinDate: "May 2023", stats: { artworks: 1, followers: 1100, following: 200 }, likedArtworkIds: [], followingIds: [] }
+  { id: '3', email: 'marcus@test.com', password: 'password123', role: 'artist', name: "Marcus Williams", username: "marcusart", avatar: "https://i.pravatar.cc/150?img=2", bio: "Surreal artist exploring the urban dreamscape.", joinDate: "Feb 2023", stats: { artworks: 1, followers: 800, following: 300, liked: 0 }, likedArtworkIds: [], followingIds: [] },
+  { id: '4', email: 'emma@test.com', password: 'password123', role: 'artist', name: "Emma Rodriguez", username: "emmacreates", avatar: "https://i.pravatar.cc/150?img=3", bio: "Painter obsessed with color and texture.", joinDate: "April 2023", stats: { artworks: 1, followers: 2500, following: 450, liked: 0 }, likedArtworkIds: [], followingIds: [] },
+  { id: '5', email: 'lisa@test.com', password: 'password123', role: 'artist', name: "Lisa Thompson", username: "lisadesigns", avatar: "https://i.pravatar.cc/150?img=5", bio: "Minimalist illustrator creating geometric wonders.", joinDate: "May 2023", stats: { artworks: 1, followers: 1100, following: 200, liked: 0 }, likedArtworkIds: [], followingIds: [] }
 ];
 
 let userDatabase: User[] | null = null;
@@ -452,7 +454,6 @@ export const toggleFollowUser = (currentUserId: string, targetUserId: string): U
   const db = initializeUserDatabase();
   
   // Determine if we are currently connected by checking if currentUser follows targetUser
-  // (In a perfect mutual system, both should match, but we rely on one to toggle)
   const currentUser = db.find(u => u.id === currentUserId);
   if (!currentUser) throw new Error("Current user not found");
   
@@ -504,6 +505,35 @@ export const toggleFollowUser = (currentUserId: string, targetUserId: string): U
   }
 
   return newDb.find(u => u.id === currentUserId)!;
+};
+
+export const toggleArtworkLike = (userId: string, artworkId: string): User => {
+    let db = initializeUserDatabase();
+    const newDb = db.map(user => {
+        if (user.id === userId) {
+            const likes = new Set(user.likedArtworkIds);
+            let likedCount = user.stats.liked || 0;
+            
+            if (likes.has(artworkId)) {
+                likes.delete(artworkId);
+                likedCount = Math.max(0, likedCount - 1);
+            } else {
+                likes.add(artworkId);
+                likedCount++;
+                // Record interaction for recommendation engine
+                recordInteraction(userId, artworkId, 'like');
+            }
+            
+            return { 
+                ...user, 
+                likedArtworkIds: Array.from(likes),
+                stats: { ...user.stats, liked: likedCount }
+            };
+        }
+        return user;
+    });
+    saveUserDatabase(newDb);
+    return newDb.find(u => u.id === userId)!;
 };
 
 export const checkEmailExists = (email: string): boolean => {

@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Heart, MessageCircle, Image as ImageIcon, Send, X, LoaderCircle, Trash2, Sparkles, UserPlus, Eye, EyeOff, MoreVertical } from "lucide-react";
@@ -20,7 +22,8 @@ import {
   deleteSocialPost,
   dismissRecommendation,
   toggleHideSocialPost,
-  toggleHideRecommendation
+  toggleHideRecommendation,
+  toggleArtworkLike
 } from "../data/mock";
 import { useImageEnhancer } from "../hooks/useImageEnhancer";
 import ArtworkDetailModal from "../components/ArtworkDetailModal";
@@ -121,7 +124,7 @@ const RecommendedArtworkCard: React.FC<{
 }
 
 export default function HomeSocial() {
-  const { currentUser } = useUser();
+  const { currentUser, setCurrentUser } = useUser();
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [showHiddenContent, setShowHiddenContent] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -233,6 +236,12 @@ export default function HomeSocial() {
     // Force refresh to show updated state
     loadFeed(); 
   };
+
+  const handleArtworkLike = (artworkId: string) => {
+      if (!currentUser) return;
+      const updatedUser = toggleArtworkLike(currentUser.id, artworkId);
+      setCurrentUser(updatedUser);
+  }
 
   const handleCommentChange = (postId: string, text: string) => {
     setCommentText(prev => ({ ...prev, [postId]: text }));
@@ -533,8 +542,8 @@ export default function HomeSocial() {
           artwork={selectedArtwork}
           artist={findUserById(selectedArtwork.artistId)}
           onClose={() => setSelectedArtwork(null)}
-          isLiked={false} // Simplified for preview
-          onToggleLike={() => {}} 
+          isLiked={currentUser?.likedArtworkIds?.includes(selectedArtwork.id) || false}
+          onToggleLike={() => handleArtworkLike(selectedArtwork.id)} 
         />
       )}
     </div>

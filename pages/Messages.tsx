@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -521,13 +522,6 @@ export default function Messages() {
               </div>
           </div>
       )}
-
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slide-up { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
-        .animate-slide-up { animation: slide-up 0.2s ease-out forwards; }
-      `}} />
     </div>
   );
 }

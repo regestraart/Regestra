@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { createUrl } from "../utils";
@@ -78,6 +75,14 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slide-up { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes zoom-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
+        .animate-slide-up { animation: slide-up 0.3s ease-out forwards; }
+        .animate-zoom-in { animation: zoom-in 0.2s ease-out forwards; }
+      `}} />
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">

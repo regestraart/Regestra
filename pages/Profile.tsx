@@ -3,6 +3,8 @@
 
 
 
+
+
 import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { createUrl } from "../utils";
@@ -11,7 +13,7 @@ import { Settings, Share2, MapPin, Link as LinkIcon, Calendar, Heart, Upload, In
 import ArtworkDetailModal from "../components/ArtworkDetailModal";
 import AddToCollectionModal from "../components/AddToCollectionModal";
 import { useUser } from "../context/UserContext";
-import { findUserById, findArtworksByArtistId, User, Artwork, artworks as allArtworks, CollectionArtwork, findCollectionArtworksByUserId, deleteUserArtwork, deleteCollectionArtwork, addCollectionArtwork, toggleFollowUser } from "../data/mock";
+import { findUserById, findArtworksByArtistId, User, Artwork, artworks as allArtworks, CollectionArtwork, findCollectionArtworksByUserId, deleteUserArtwork, deleteCollectionArtwork, addCollectionArtwork, toggleFollowUser, toggleArtworkLike } from "../data/mock";
 import ConfirmationModal from "../components/ConfirmationModal";
 
 const BehanceIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -29,7 +31,6 @@ export default function Profile() {
   const [userArtworks, setUserArtworks] = useState<(Artwork | CollectionArtwork)[]>([]);
   const [activeTab, setActiveTab] = useState('artworks');
   const [selectedArtwork, setSelectedArtwork] = useState<SelectedArtwork | null>(null);
-  const [likedArtworks, setLikedArtworks] = useState<Set<string>>(new Set());
   const [showAddToCollection, setShowAddToCollection] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -45,22 +46,10 @@ export default function Profile() {
     }
   }, [userId, currentUser]); // Reload if currentUser changes (e.g. follow status update)
 
-  useEffect(() => {
-    const storedLikes = localStorage.getItem('likedArtworks');
-    if (storedLikes) {
-      setLikedArtworks(new Set(JSON.parse(storedLikes)));
-    }
-  }, []);
-
   const toggleLike = (artworkId: string) => {
-    const newLikedArtworks = new Set(likedArtworks);
-    if (newLikedArtworks.has(artworkId)) {
-      newLikedArtworks.delete(artworkId);
-    } else {
-      newLikedArtworks.add(artworkId);
-    }
-    setLikedArtworks(newLikedArtworks);
-    localStorage.setItem('likedArtworks', JSON.stringify(Array.from(newLikedArtworks)));
+    if (!currentUser) return;
+    const updatedUser = toggleArtworkLike(currentUser.id, artworkId);
+    setCurrentUser(updatedUser);
   };
 
   const handleCloseModal = () => setSelectedArtwork(null);
@@ -277,9 +266,9 @@ export default function Profile() {
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
           {gridContent.map((artwork) => {
-            const isLiked = likedArtworks.has(artwork.id);
+            const isLiked = currentUser?.likedArtworkIds?.includes(artwork.id) || false;
             const baseLikes = ('likes' in artwork && artwork.likes) || 0;
-            const currentLikes = baseLikes + (isLiked ? 1 : 0);
+            const currentLikes = baseLikes; // baseLikes includes initial count, we don't increment client-side here to avoid confusion, let mock handle sync
             
             return (
               <div key={artwork.id} onClick={() => handleArtworkClick(artwork)} className="group relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer">
@@ -310,7 +299,7 @@ export default function Profile() {
           artwork={selectedArtwork}
           artist={selectedArtwork.artist}
           onClose={handleCloseModal}
-          isLiked={likedArtworks.has(selectedArtwork.id)}
+          isLiked={currentUser?.likedArtworkIds?.includes(selectedArtwork.id) || false}
           onToggleLike={() => toggleLike(selectedArtwork.id)}
           onDelete={canDelete ? () => setShowDeleteConfirm(true) : undefined}
         />

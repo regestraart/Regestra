@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, UserPlus, X, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -49,7 +50,7 @@ const NotificationsPopover = ({ onClose }: { onClose: () => void }) => {
   if (!currentUser) return null;
 
   return (
-    <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-50 animate-in fade-in zoom-in duration-200">
+    <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-50 animate-zoom-in">
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
         <h3 className="font-semibold text-gray-900">Notifications</h3>
         {notifications.length > 0 && (
