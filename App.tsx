@@ -14,6 +14,7 @@ import Messages from './pages/Messages';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import ForgotPassword from './pages/ForgotPassword';
+import Admin from './pages/Admin';
 import { UserProvider } from './context/UserContext';
 
 export default function App() {
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="login" element={<Login />} />
             <Route path="sign-up" element={<SignUp />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
+            <Route path="admin" element={<Admin />} />
           </Route>
         </Routes>
       </UserProvider>

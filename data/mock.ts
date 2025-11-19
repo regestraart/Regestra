@@ -18,6 +18,7 @@
 
 
 
+
 export interface User {
   id: string;
   email: string;
@@ -529,6 +530,18 @@ export const toggleArtworkLike = (userId: string, artworkId: string): User => {
                 likedArtworkIds: Array.from(likes),
                 stats: { ...user.stats, liked: likedCount }
             };
+        }
+        return user;
+    });
+    saveUserDatabase(newDb);
+    return newDb.find(u => u.id === userId)!;
+};
+
+export const updateUserProfile = (userId: string, updates: Partial<User>): User => {
+    let db = initializeUserDatabase();
+    const newDb = db.map(user => {
+        if (user.id === userId) {
+            return { ...user, ...updates };
         }
         return user;
     });

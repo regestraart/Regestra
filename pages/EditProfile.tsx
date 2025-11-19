@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { createUrl } from "../utils";
@@ -10,7 +12,7 @@ import { Camera, ArrowLeft, Save, LoaderCircle, Sparkles, Instagram, Twitter, Al
 import { useImageEnhancer } from "../hooks/useImageEnhancer";
 import { useUser } from "../context/UserContext";
 import ConfirmationModal from "../components/ConfirmationModal";
-import { deleteUser } from "../data/mock";
+import { deleteUser, updateUserProfile, User } from "../data/mock";
 
 const BehanceIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -66,7 +68,24 @@ export default function EditProfile() {
     setSocials(prev => ({ ...prev, [platform]: value }));
   };
 
-  const handleSave = () => navigate(createUrl('/profile/:userId', { userId: currentUser.id }));
+  const handleSave = () => {
+    if (currentUser) {
+        const updatedUser = updateUserProfile(currentUser.id, {
+            name,
+            username,
+            bio,
+            location,
+            website,
+            commissionStatus: commissionStatus as any,
+            contactEmail,
+            socials,
+            avatar,
+            coverImage: cover
+        });
+        setCurrentUser(updatedUser);
+        navigate(createUrl('/profile/:userId', { userId: currentUser.id }));
+    }
+  };
 
   const handleDeleteAccount = () => {
     deleteUser(currentUser.id);

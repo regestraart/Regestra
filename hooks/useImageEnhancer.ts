@@ -35,7 +35,7 @@ export const useImageEnhancer = () => {
         inlineData: { mimeType, data },
       };
       const textPart = {
-        text: 'Enhance the quality of this image. Improve sharpness, clarity, and color balance. Do not add, remove, or change any content from the original image.'
+        text: 'Enhance the resolution and sharpness of this image. Do not enhance colors, saturation, or lighting. Do not add, remove, or change any content. Return the image exactly as is, but sharper.'
       };
       
       const response = await ai.models.generateContent({

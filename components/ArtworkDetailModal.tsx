@@ -1,4 +1,6 @@
 
+
+
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { X, Heart, MessageCircle, Trash2 } from 'lucide-react';
@@ -77,7 +79,7 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
           <div className="flex items-start justify-between mb-4 flex-shrink-0">
             {isPlatformArtwork && artist?.id ? (
               <Link to={createUrl('/profile/:userId', { userId: artist.id })} className="flex items-center gap-3 group" onClick={onClose}>
-                <img src={artist.avatar} alt={artist.name} className="w-12 h-12 rounded-full" />
+                <img src={artist.avatar} alt={artist.name} className="w-12 h-12 rounded-full object-cover" />
                 <div>
                   <p className="font-bold text-gray-900 group-hover:underline">{artist.name}</p>
                   <p className="text-sm text-gray-500">@{artist.username}</p>
@@ -131,14 +133,14 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
                 <h3 className="font-semibold text-gray-800 mb-2">Comments (3)</h3>
                 <div className="space-y-3 text-sm">
                     <div className="flex gap-2 items-start">
-                        <img src="https://i.pravatar.cc/150?img=3" alt="Commenter" className="w-8 h-8 rounded-full"/>
+                        <img src="https://i.pravatar.cc/150?img=3" alt="Commenter" className="w-8 h-8 rounded-full object-cover"/>
                         <div>
                             <p><span className="font-semibold">Emma Rodriguez</span> This is absolutely stunning!</p>
                             <span className="text-xs text-gray-400">2h ago</span>
                         </div>
                     </div>
                      <div className="flex gap-2 items-start">
-                        <img src="https://i.pravatar.cc/150?img=4" alt="Commenter" className="w-8 h-8 rounded-full"/>
+                        <img src="https://i.pravatar.cc/150?img=4" alt="Commenter" className="w-8 h-8 rounded-full object-cover"/>
                         <div>
                             <p><span className="font-semibold">James Kim</span> Love the color palette. 🔥</p>
                              <span className="text-xs text-gray-400">1h ago</span>

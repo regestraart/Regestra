@@ -1,10 +1,4 @@
 
-
-
-
-
-
-
 import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { createUrl } from "../utils";
@@ -15,6 +9,7 @@ import AddToCollectionModal from "../components/AddToCollectionModal";
 import { useUser } from "../context/UserContext";
 import { findUserById, findArtworksByArtistId, User, Artwork, artworks as allArtworks, CollectionArtwork, findCollectionArtworksByUserId, deleteUserArtwork, deleteCollectionArtwork, addCollectionArtwork, toggleFollowUser, toggleArtworkLike } from "../data/mock";
 import ConfirmationModal from "../components/ConfirmationModal";
+import ShareModal from "../components/ShareModal";
 
 const BehanceIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -33,6 +28,7 @@ export default function Profile() {
   const [selectedArtwork, setSelectedArtwork] = useState<SelectedArtwork | null>(null);
   const [showAddToCollection, setShowAddToCollection] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
     const user = findUserById(userId);
@@ -140,7 +136,7 @@ export default function Profile() {
       <div className="relative">
         <div className="h-64 md:h-80 bg-gray-200">
           {profileUser.coverImage ? (
-            <img src={profileUser.coverImage} alt="Cover" className="w-full h-full object-cover" />
+            <img src={profileUser.coverImage} alt="Cover" className="w-full h-full object-cover object-center" />
           ) : !isArtist ? (
             <div className="w-full h-full grid grid-cols-2 md:grid-cols-4 gap-0.5">
                 {likedArtForMosaic.map(art => (
@@ -158,7 +154,7 @@ export default function Profile() {
               <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8">
                 <div className="flex flex-col md:flex-row items-start gap-6">
                   <div className="relative -mt-24 flex-shrink-0">
-                    <img src={profileUser.avatar} alt={profileUser.name} className="w-32 h-32 rounded-3xl border-4 border-white shadow-lg" />
+                    <img src={profileUser.avatar} alt={profileUser.name} className="w-32 h-32 rounded-3xl border-4 border-white shadow-lg object-cover bg-gray-100" />
                   </div>
 
                   <div className="flex-1 w-full">
@@ -191,7 +187,13 @@ export default function Profile() {
                             )}
                           </Button>
                         )}
-                        <Button variant="outline" className="rounded-full"><Share2 className="w-4 h-4 mr-2" /> Share</Button>
+                        <Button 
+                            variant="outline" 
+                            className="rounded-full" 
+                            onClick={() => setShowShareModal(true)}
+                        >
+                            <Share2 className="w-4 h-4 mr-2" /> Share
+                        </Button>
                       </div>
                     </div>
                     <p className="text-gray-700 mb-4 max-w-2xl">{profileUser.bio}</p>
@@ -317,6 +319,13 @@ export default function Profile() {
           title="Delete Artwork"
           description="Are you sure you want to delete this artwork? This action is irreversible and the artwork will be permanently removed."
           confirmText="Delete Forever"
+        />
+      )}
+      {showShareModal && profileUser && (
+        <ShareModal 
+            onClose={() => setShowShareModal(false)}
+            url={window.location.href}
+            title={`Check out ${profileUser.name} on Regestra`}
         />
       )}
     </div>
