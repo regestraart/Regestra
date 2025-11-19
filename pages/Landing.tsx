@@ -1,14 +1,14 @@
 
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
-import { ArrowRight, Sparkles, Users, Palette } from "lucide-react";
+import { ArrowRight, Sparkles, Users, Palette, ArrowDown } from "lucide-react";
+import { artworks } from "../data/mock";
 
-const ArtworkSample = ({ image, index }: { image: string; index: number }) => {
-  const [hasError, setHasError] = useState(false);
+const ArtworkSample: React.FC<{ image: string; index: number }> = ({ image, index }) => {
+  const [isVisible, setIsVisible] = useState(true);
 
-  if (hasError) return null;
+  if (!isVisible) return null;
 
   return (
     <div 
@@ -20,7 +20,7 @@ const ArtworkSample = ({ image, index }: { image: string; index: number }) => {
           alt={`Artwork ${index + 1}`} 
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
-          onError={() => setHasError(true)}
+          onError={() => setIsVisible(false)}
         />
       </div>
     </div>
@@ -28,38 +28,15 @@ const ArtworkSample = ({ image, index }: { image: string; index: number }) => {
 };
 
 export default function Landing() {
-  // Pool of artistic/abstract image IDs to simulate AI art
-  const artworkIds = [
-    "1579783902614-a3fb3927b6a5", // Abstract Waves
-    "1541961017774-22349e4a1262", // Paint
-    "1583339793403-3d9b001b6008", // Abstract
-    "1582561424760-0b1a93b89431", // Neon
-    "1547891654-e66ed7ebb968",    // Geometric
-    "1578301978162-7aae4d755744", // Digital
-    "1569172194622-6202a391a0a5", // Fluid
-    "1565578255382-f56c2b39003e", // Abstract 2
-    "1580137189272-c9379f8864fd", // Dark abstract
-    "1577720580479-7d839d829c73", // Cube
-    "1550684848-fac1c5b4e853",    // Urban Mirage
-    "1536924940846-227afb31e2a5", // Space
-    "1561214115-f2f134cc4912",    // Dark 2
-    "1618005182384-a83a8bd57fbe", // Cover
-    "1558470598-a5dda9640f6b",    // Paint 2
-    "1563089145-599997674d42",    // Neon 2
-    "1550258987-190a2d41a8ba",    // Fluid 2
-    "1545239351-ef35f4394e4e",    // Geometric 2
-    "1515405295579-ba7f454346a3", // Space 2
-    "1558591714-0320663d6dcd"     // Abstract 3
-  ];
+  const [visibleCount, setVisibleCount] = useState(20);
 
-  // Generate 20 items by randomly selecting from the ID pool on mount
-  const [artworkSamples] = useState(() => {
-    return Array.from({ length: 20 }).map(() => {
-      const id = artworkIds[Math.floor(Math.random() * artworkIds.length)];
-      // Use same dimensions as Home page cards (600x800)
-      return `https://images.unsplash.com/photo-${id}?w=600&h=800&fit=crop&q=80`;
-    });
-  });
+  const handleLoadMore = () => {
+    // Load all remaining artworks at once
+    setVisibleCount(artworks.length);
+  };
+
+  const displayArtworks = artworks.slice(0, visibleCount);
+  const hasMore = visibleCount < artworks.length;
 
   return (
     <div className="min-h-screen">
@@ -79,21 +56,8 @@ export default function Landing() {
             </h1>
             
             <p className="text-xl md:text-2xl text-purple-100 mb-10 max-w-2xl mx-auto">
-              Join thousands of artists sharing their work, building their portfolio, and connecting with a vibrant creative community.
+              Join thousands of artists and art lovers sharing their work, building their portfolio, and connecting with a vibrant creative community.
             </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/sign-up">
-                <Button size="xl" variant="primary-light" className="rounded-full font-semibold shadow-xl">
-                  Create Your Free Account
-                </Button>
-              </Link>
-              <Link to="/login">
-                <Button size="xl" variant="outline-light" className="rounded-full font-semibold">
-                  Login
-                </Button>
-              </Link>
-            </div>
             
           </div>
         </div>
@@ -119,19 +83,19 @@ export default function Landing() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {artworkSamples.map((image, index) => (
-              <ArtworkSample key={index} image={image} index={index} />
+            {displayArtworks.map((artwork) => (
+              <ArtworkSample key={artwork.id} image={artwork.image} index={Number(artwork.id)} />
             ))}
           </div>
 
-          <div className="text-center">
-            <Link to="/home">
-              <Button size="lg" variant="outline" className="rounded-full px-8">
-                View All Artworks
-                <ArrowRight className="ml-2 w-4 h-4" />
+          {hasMore && (
+            <div className="text-center">
+              <Button size="lg" variant="outline" onClick={handleLoadMore} className="rounded-full px-8">
+                Load More Artworks
+                <ArrowDown className="ml-2 w-4 h-4" />
               </Button>
-            </Link>
-          </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -143,7 +107,7 @@ export default function Landing() {
               Everything You Need
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Professional tools designed specifically for artists
+              Professional tools designed specifically for artists and art lovers
             </p>
           </div>
 

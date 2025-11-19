@@ -1,13 +1,17 @@
 
+
+
+
+
 import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { createUrl } from "../utils";
 import { Button } from "../components/ui/Button";
-import { Settings, Share2, MapPin, Link as LinkIcon, Calendar, Heart, Upload, Instagram, Twitter, Mail, Plus } from "lucide-react";
+import { Settings, Share2, MapPin, Link as LinkIcon, Calendar, Heart, Upload, Instagram, Twitter, Mail, Plus, UserCheck, UserPlus } from "lucide-react";
 import ArtworkDetailModal from "../components/ArtworkDetailModal";
 import AddToCollectionModal from "../components/AddToCollectionModal";
 import { useUser } from "../context/UserContext";
-import { findUserById, findArtworksByArtistId, User, Artwork, artworks as allArtworks, CollectionArtwork, findCollectionArtworksByUserId, deleteUserArtwork, deleteCollectionArtwork, addCollectionArtwork } from "../data/mock";
+import { findUserById, findArtworksByArtistId, User, Artwork, artworks as allArtworks, CollectionArtwork, findCollectionArtworksByUserId, deleteUserArtwork, deleteCollectionArtwork, addCollectionArtwork, toggleFollowUser } from "../data/mock";
 import ConfirmationModal from "../components/ConfirmationModal";
 
 const BehanceIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -20,7 +24,7 @@ type SelectedArtwork = (Artwork | CollectionArtwork) & { artist?: Partial<User> 
 
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
-  const { currentUser } = useUser();
+  const { currentUser, setCurrentUser } = useUser();
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [userArtworks, setUserArtworks] = useState<(Artwork | CollectionArtwork)[]>([]);
   const [activeTab, setActiveTab] = useState('artworks');
@@ -39,7 +43,7 @@ export default function Profile() {
       setUserArtworks(findCollectionArtworksByUserId(user.id));
       setActiveTab('collections');
     }
-  }, [userId]);
+  }, [userId, currentUser]); // Reload if currentUser changes (e.g. follow status update)
 
   useEffect(() => {
     const storedLikes = localStorage.getItem('likedArtworks');
@@ -83,12 +87,27 @@ export default function Profile() {
     }
   };
 
+  const handleFollowToggle = () => {
+    if (currentUser && profileUser) {
+      try {
+        const updatedCurrentUser = toggleFollowUser(currentUser.id, profileUser.id);
+        setCurrentUser(updatedCurrentUser);
+        // Refetch profile user to update follower count
+        const updatedProfileUser = findUserById(profileUser.id);
+        setProfileUser(updatedProfileUser || null);
+      } catch (e) {
+        console.error("Failed to follow user", e);
+      }
+    }
+  };
+
   if (!profileUser) {
     return <div>User not found or loading...</div>;
   }
 
   const isOwnProfile = currentUser?.id === profileUser.id;
   const isArtist = profileUser.role === 'artist';
+  const isFollowing = currentUser?.followingIds?.includes(profileUser.id);
 
   const getProfileUserLikedArtworks = () => {
     if (profileUser.likedArtworkIds) {
@@ -166,7 +185,22 @@ export default function Profile() {
                             <Button variant="outline" className="rounded-full"><Settings className="w-4 h-4 mr-2" /> Edit Profile</Button>
                           </Link>
                         ) : (
-                          <Button className="rounded-full">Follow</Button>
+                          <Button 
+                            className={`rounded-full px-6 min-w-[140px] transition-all duration-200 ${
+                              isFollowing 
+                                ? 'bg-white border-2 border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300' 
+                                : 'bg-gradient-to-r from-purple-600 to-blue-500 text-white hover:opacity-90 shadow-md hover:shadow-lg'
+                            }`} 
+                            variant="ghost"
+                            onClick={handleFollowToggle}
+                            disabled={!currentUser}
+                          >
+                            {isFollowing ? (
+                              <><UserCheck className="w-4 h-4 mr-2" /> Connected</>
+                            ) : (
+                              <><UserPlus className="w-4 h-4 mr-2" /> Connect</>
+                            )}
+                          </Button>
                         )}
                         <Button variant="outline" className="rounded-full"><Share2 className="w-4 h-4 mr-2" /> Share</Button>
                       </div>
@@ -188,15 +222,28 @@ export default function Profile() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200 flex-wrap gap-4">
-                    <div className="flex items-center gap-8">
-                        {isArtist && <div><p className="text-2xl font-bold text-gray-900">{userArtworks.length}</p><p className="text-sm text-gray-600">Artworks</p></div>}
-                        {!isArtist && <div><p className="text-2xl font-bold text-gray-900">{userArtworks.length}</p><p className="text-sm text-gray-600">Collections</p></div>}
-                        <div><p className="text-2xl font-bold text-gray-900">{getProfileUserLikedArtworks().length}</p><p className="text-sm text-gray-600">Liked</p></div>
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                    <div className="grid grid-cols-3 gap-4 w-full">
+                        <div className="text-center group cursor-default">
+                            <p className="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">{userArtworks.length}</p>
+                            <p className="text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">{isArtist ? 'Artworks' : 'Collections'}</p>
+                        </div>
+                        <div className="text-center border-l border-r border-gray-100 group cursor-default">
+                            <p className="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">{getProfileUserLikedArtworks().length}</p>
+                            <p className="text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">Liked</p>
+                        </div>
+                        <div className="text-center group cursor-default">
+                            <p className="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">{profileUser.stats.followers}</p>
+                            <p className="text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">Connections</p>
+                        </div>
                     </div>
+                    
                     {isArtist && profileUser.commissionStatus && profileUser.commissionStatus !== 'Not Available' && (
-                        <div className={`text-sm font-semibold px-4 py-2 rounded-full ${profileUser.commissionStatus === 'Open' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                            {profileUser.commissionStatus} for Commissions
+                        <div className="mt-6 flex justify-center">
+                            <div className={`inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm border ${profileUser.commissionStatus === 'Open' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                                <span className={`w-2 h-2 rounded-full mr-2 ${profileUser.commissionStatus === 'Open' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                {profileUser.commissionStatus} for Commissions
+                            </div>
                         </div>
                     )}
                 </div>

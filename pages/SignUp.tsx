@@ -82,6 +82,7 @@ export default function SignUp() {
           bio: "",
           joinDate: new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }),
           likedArtworkIds: [],
+          followingIds: [],
           stats: { 
             following: 0,
             followers: 0,

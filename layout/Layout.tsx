@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { createUrl } from "../utils";
@@ -70,24 +71,7 @@ export default function Layout() {
               <Logo />
             </div>
 
-            {isLanding && (
-               <nav className="flex items-center gap-2">
-                  <Link to="/login">
-                    <Button variant="ghost" className="rounded-full">
-                      <LogIn className="w-4 h-4 mr-2" />
-                      Log In
-                    </Button>
-                  </Link>
-                  <Link to="/sign-up">
-                    <Button className="rounded-full">
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Sign Up
-                    </Button>
-                  </Link>
-                </nav>
-            )}
-
-            {!isLanding && !isAuthPage && (
+            {!isAuthPage && (
               <>
                 {isLoggedIn && currentUser ? (
                   <div className="flex items-center gap-6">
@@ -133,11 +117,6 @@ export default function Layout() {
                   </div>
                 ) : (
                   <nav className="flex items-center gap-6">
-                    {!isHomePage && (
-                        <Link to="/home" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
-                            Explore
-                        </Link>
-                    )}
                     <Link to="/login" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
                       Log In
                     </Link>

@@ -1,41 +1,19 @@
-
 import React, { useState } from 'react';
 import { Heart, MessageCircle, UserPlus, X, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
 
-let initialNotifications = [
-  {
-    id: 1,
-    type: 'like',
-    user: { name: 'Emma Rodriguez', avatar: 'https://i.pravatar.cc/150?img=3' },
-    artworkTitle: 'Abstract Waves',
-    time: '2m ago',
-    unread: true,
-  },
-  {
-    id: 2,
-    type: 'comment',
-    user: { name: 'James Kim', avatar: 'https://i.pravatar.cc/150?img=4' },
-    comment: 'Love the color palette! 🔥',
-    time: '1h ago',
-    unread: true,
-  },
-  {
-    id: 3,
-    type: 'follow',
-    user: { name: 'Alex Johnson', avatar: 'https://i.pravatar.cc/300?img=11' },
-    time: '3h ago',
-    unread: false,
-  },
-  {
-    id: 4,
-    type: 'like',
-    user: { name: 'Marcus Williams', avatar: 'https://i.pravatar.cc/150?img=2' },
-    artworkTitle: 'Neon Nights',
-    time: '1d ago',
-    unread: false,
-  },
-];
+interface Notification {
+  id: number;
+  type: 'like' | 'comment' | 'follow';
+  user: { name: string; avatar: string };
+  artworkTitle?: string;
+  comment?: string;
+  time: string;
+  unread: boolean;
+}
+
+// Start with empty notifications so new users have a clean slate
+let initialNotifications: Notification[] = [];
 
 const NotificationIcon = ({ type }: { type: string }) => {
   switch (type) {
@@ -47,7 +25,7 @@ const NotificationIcon = ({ type }: { type: string }) => {
 };
 
 const NotificationsPopover = () => {
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
 
   const handleDelete = (id: number) => {
     const updated = notifications.filter(n => n.id !== id);

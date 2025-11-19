@@ -1,5 +1,9 @@
 
 
+
+
+
+
 export interface User {
   id: string;
   email: string;
@@ -28,6 +32,7 @@ export interface User {
     liked?: number;
   };
   likedArtworkIds: string[];
+  followingIds: string[]; // New field for connections
   collections?: Collection[];
 }
 
@@ -76,6 +81,29 @@ export interface Collection {
     artworks: CollectionArtwork[];
 }
 
+export interface Comment {
+  id: string;
+  userId: string;
+  text: string;
+  timestamp: string;
+}
+
+export interface SocialPost {
+  id: string;
+  authorId: string;
+  content: string; // Text/Article
+  image?: string; // Optional image
+  timestamp: number; // Unix timestamp for easier sorting
+  timestampStr: string; // Display string
+  likes: string[]; // Array of user IDs who liked it
+  comments: Comment[];
+}
+
+// New Interface for Feed Items
+export type FeedItem = 
+  | { type: 'post'; data: SocialPost }
+  | { type: 'recommendation'; data: Artwork; reason: string };
+
 // --- LocalStorage User Database ---
 const initialUsers: User[] = [
   {
@@ -96,6 +124,7 @@ const initialUsers: User[] = [
     socials: { instagram: 'sarahchen.art', twitter: 'sarahchen', behance: 'sarahchen' },
     stats: { artworks: 3, followers: 1234, following: 567 },
     likedArtworkIds: ['2'],
+    followingIds: ['3', '4']
   },
   {
     id: '2',
@@ -111,6 +140,7 @@ const initialUsers: User[] = [
     joinDate: "March 2023",
     stats: { liked: 152, collections: 1, following: 89, followers: 120 },
     likedArtworkIds: ['1', '5', '6'],
+    followingIds: ['1'],
     collections: [
         {
             id: 'col1',
@@ -121,12 +151,53 @@ const initialUsers: User[] = [
         }
     ]
   },
-  { id: '3', email: 'marcus@test.com', password: 'password123', role: 'artist', name: "Marcus Williams", username: "marcusart", avatar: "https://i.pravatar.cc/150?img=2", bio: "Surreal artist exploring the urban dreamscape.", joinDate: "Feb 2023", stats: { artworks: 1, followers: 800, following: 300 }, likedArtworkIds: [] },
-  { id: '4', email: 'emma@test.com', password: 'password123', role: 'artist', name: "Emma Rodriguez", username: "emmacreates", avatar: "https://i.pravatar.cc/150?img=3", bio: "Painter obsessed with color and texture.", joinDate: "April 2023", stats: { artworks: 1, followers: 2500, following: 450 }, likedArtworkIds: [] },
-  { id: '5', email: 'lisa@test.com', password: 'password123', role: 'artist', name: "Lisa Thompson", username: "lisadesigns", avatar: "https://i.pravatar.cc/150?img=5", bio: "Minimalist illustrator creating geometric wonders.", joinDate: "May 2023", stats: { artworks: 1, followers: 1100, following: 200 }, likedArtworkIds: [] }
+  { id: '3', email: 'marcus@test.com', password: 'password123', role: 'artist', name: "Marcus Williams", username: "marcusart", avatar: "https://i.pravatar.cc/150?img=2", bio: "Surreal artist exploring the urban dreamscape.", joinDate: "Feb 2023", stats: { artworks: 1, followers: 800, following: 300 }, likedArtworkIds: [], followingIds: [] },
+  { id: '4', email: 'emma@test.com', password: 'password123', role: 'artist', name: "Emma Rodriguez", username: "emmacreates", avatar: "https://i.pravatar.cc/150?img=3", bio: "Painter obsessed with color and texture.", joinDate: "April 2023", stats: { artworks: 1, followers: 2500, following: 450 }, likedArtworkIds: [], followingIds: [] },
+  { id: '5', email: 'lisa@test.com', password: 'password123', role: 'artist', name: "Lisa Thompson", username: "lisadesigns", avatar: "https://i.pravatar.cc/150?img=5", bio: "Minimalist illustrator creating geometric wonders.", joinDate: "May 2023", stats: { artworks: 1, followers: 1100, following: 200 }, likedArtworkIds: [], followingIds: [] }
 ];
 
 let userDatabase: User[] | null = null;
+
+// --- Interaction Tracking System ---
+// Stores weighted interests based on user actions
+interface UserInteractions {
+  tags: Record<string, number>; // tag -> score
+  artistIds: Record<string, number>; // artistId -> score
+  viewedArtworks: Set<string>;
+}
+
+// Mock in-memory storage for interactions (reset on reload in this demo, but could be LS)
+const userInteractionsMap: Record<string, UserInteractions> = {};
+
+const getUserInteractions = (userId: string): UserInteractions => {
+  if (!userInteractionsMap[userId]) {
+    userInteractionsMap[userId] = { tags: {}, artistIds: {}, viewedArtworks: new Set() };
+  }
+  return userInteractionsMap[userId];
+};
+
+export const recordInteraction = (userId: string, artworkId: string, type: 'view' | 'linger' | 'save' | 'like') => {
+  const interactions = getUserInteractions(userId);
+  const artwork = artworks.find(a => a.id === artworkId);
+  if (!artwork) return;
+
+  let weight = 1;
+  if (type === 'linger') weight = 3;
+  if (type === 'like') weight = 5;
+  if (type === 'save') weight = 5;
+
+  // Score tags
+  artwork.tags.forEach(tag => {
+    interactions.tags[tag] = (interactions.tags[tag] || 0) + weight;
+  });
+
+  // Score artist
+  interactions.artistIds[artwork.artistId] = (interactions.artistIds[artwork.artistId] || 0) + weight;
+
+  // Mark view
+  if (type === 'view') interactions.viewedArtworks.add(artworkId);
+};
+
 
 const initializeUserDatabase = (): User[] => {
   if (userDatabase) {
@@ -174,10 +245,67 @@ export const registerUser = (newUser: Omit<User, 'id'>): User => {
   if (db.some(user => user.username.toLowerCase() === newUser.username.toLowerCase())) {
     throw new Error("This username is already taken. Please choose another.");
   }
-  const user: User = { ...newUser, id: Date.now().toString() };
+  // Initialize followingIds as empty array
+  const user: User = { ...newUser, id: Date.now().toString(), followingIds: [] };
   const newDb = [...db, user];
   saveUserDatabase(newDb);
   return user;
+};
+
+// Mutual connection function (Connect)
+export const toggleFollowUser = (currentUserId: string, targetUserId: string): User => {
+  const db = initializeUserDatabase();
+  
+  // Determine if we are currently connected by checking if currentUser follows targetUser
+  // (In a perfect mutual system, both should match, but we rely on one to toggle)
+  const currentUser = db.find(u => u.id === currentUserId);
+  if (!currentUser) throw new Error("Current user not found");
+  
+  const isConnected = currentUser.followingIds.includes(targetUserId);
+  
+  const newDb = db.map(user => {
+    // Update Current User
+    if (user.id === currentUserId) {
+      const newFollowing = isConnected 
+        ? user.followingIds.filter(id => id !== targetUserId)
+        : [...user.followingIds, targetUserId];
+      
+      return {
+        ...user,
+        followingIds: newFollowing,
+        stats: {
+            ...user.stats,
+            following: newFollowing.length,
+            // In a mutual connect model, 'followers' usually implies connections too, 
+            // but we will just increment both for symmetry or keep them independent if we view it as "friends"
+            // Let's increment both following/followers to simulate "Connections" count increasing
+            followers: isConnected ? Math.max(0, user.stats.followers - 1) : user.stats.followers + 1
+        }
+      };
+    }
+
+    // Update Target User (Mutual)
+    if (user.id === targetUserId) {
+       const newFollowing = isConnected 
+        ? user.followingIds.filter(id => id !== currentUserId)
+        : [...user.followingIds, currentUserId];
+
+      return {
+        ...user,
+        followingIds: newFollowing,
+        stats: {
+            ...user.stats,
+            following: newFollowing.length,
+            followers: isConnected ? Math.max(0, user.stats.followers - 1) : user.stats.followers + 1
+        }
+      };
+    }
+    
+    return user;
+  });
+
+  saveUserDatabase(newDb);
+  return newDb.find(u => u.id === currentUserId)!;
 };
 
 export const checkEmailExists = (email: string): boolean => {
@@ -208,67 +336,46 @@ export const deleteUser = (userId: string) => {
 // -- End DB --
 
 // -- Artworks --
-// Pool of artistic/abstract image IDs
-const artworkIds = [
-    "1579783902614-a3fb3927b6a5", // Abstract Waves
-    "1541961017774-22349e4a1262", // Paint
-    "1583339793403-3d9b001b6008", // Abstract
-    "1582561424760-0b1a93b89431", // Neon
-    "1547891654-e66ed7ebb968",    // Geometric
-    "1578301978162-7aae4d755744", // Digital
-    "1569172194622-6202a391a0a5", // Fluid
-    "1565578255382-f56c2b39003e", // Abstract 2
-    "1580137189272-c9379f8864fd", // Dark abstract
-    "1577720580479-7d839d829c73", // Cube
-    "1550684848-fac1c5b4e853",    // Urban Mirage
-    "1536924940846-227afb31e2a5", // Space
-    "1561214115-f2f134cc4912",    // Dark 2
-    "1618005182384-a83a8bd57fbe", // Cover
-    "1558470598-a5dda9640f6b",    // Paint 2
-    "1563089145-599997674d42",    // Neon 2
-    "1550258987-190a2d41a8ba",    // Fluid 2
-    "1545239351-ef35f4394e4e",    // Geometric 2
-    "1515405295579-ba7f454346a3", // Space 2
-    "1558591714-0320663d6dcd"     // Abstract 3
-];
-
-// Possible tags for random generation
-const tagPool = ["abstract", "modern", "colorful", "neon", "geometric", "surreal", "digital", "nature", "urban", "minimalist", "oil", "acrylic", "portrait", "landscape"];
 
 const generateArtworks = (): Artwork[] => {
     const generated: Artwork[] = [];
-    // Add predefined ones first to ensure specific users have specific art
-    const manualArtworks: Artwork[] = [
-        { id: '1', artistId: '1', image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&h=800&fit=crop", title: "Abstract Waves", likes: 234, description: "A vibrant and dynamic abstract piece exploring the motion of ocean waves through a unique color palette.", size: '24" x 36"', tags: ["abstract", "ocean", "colorful"], commentsCount: 12 },
-        { id: '2', artistId: '1', image: "https://images.unsplash.com/photo-1582561424760-0b1a93b89431?w=600&h=800&fit=crop", title: "Neon Nights", likes: 321, description: "Inspired by the neon glow of city nights, this piece captures the energy of the urban landscape after dark.", size: '20" x 30"', tags: ["neon", "photography", "urban"], commentsCount: 34 },
-        { id: '3', artistId: '1', image: "https://images.unsplash.com/photo-1578301978162-7aae4d755744?w=600&h=800&fit=crop", title: "Digital Harmony", likes: 412, description: "A fusion of organic shapes and digital textures, creating a harmonious visual experience.", size: '36" x 36"', tags: ["digitalart", "abstract", "harmony"], commentsCount: 5 },
-        { id: '4', artistId: '3', image: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=600&h=800&fit=crop", title: "Metropolitan Mirage", likes: 189, description: "A surreal interpretation of city life where reality bends and shifts.", size: '24" x 36"', tags: ["surreal", "urban", "digital"], commentsCount: 8 },
-        { id: '5', artistId: '4', image: "https://images.unsplash.com/photo-1583339793403-3d9b001b6008?w=600&h=800&fit=crop", title: "Color Explosion", likes: 456, description: "An explosion of color and texture, created with acrylic on canvas.", size: '48" x 48"', tags: ["acrylic", "painting", "vibrant"], commentsCount: 45 },
-        { id: '6', artistId: '5', image: "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=600&h=800&fit=crop", title: "Geometric Flow", likes: 298, description: "A study in shape and form, this digital illustration explores the interplay of geometric patterns.", size: '18" x 24"', tags: ["geometric", "illustration", "minimalist"], commentsCount: 0 },
-    ];
-    
-    generated.push(...manualArtworks);
+    const totalImages = 100; // Keep 100 unique images
 
-    // Generate the rest to reach 300 total
-    for (let i = generated.length; i < 300; i++) {
-        const randomId = artworkIds[Math.floor(Math.random() * artworkIds.length)];
-        const artistId = (Math.floor(Math.random() * 5) + 1).toString(); // Random artist 1-5
-        const numTags = Math.floor(Math.random() * 3) + 1;
-        const tags: string[] = [];
-        for (let j = 0; j < numTags; j++) {
-             tags.push(tagPool[Math.floor(Math.random() * tagPool.length)]);
-        }
+    const styles = [
+        "abstract expressionism vibrant colors",
+        "cyberpunk futuristic city neon",
+        "surreal dreamscape fantasy",
+        "digital 3d geometric shapes",
+        "oil painting textured impasto",
+        "watercolor floral soft pastel",
+        "sci-fi cosmic nebula stars",
+        "pop art retro comic style",
+        "minimalist architectural design",
+        "fantasy character portrait detailed"
+    ];
+
+    const adjectives = ["Ethereal", "Vivid", "Lost", "Silent", "Chaos", "Neon", "Future", "Pastel", "Mystic", "Golden"];
+    const nouns = ["Dreams", "City", "Horizon", "Echo", "Fragment", "Vision", "Pulse", "Orbit", "Flow", "Cipher"];
+
+    for (let i = 0; i < totalImages; i++) {
+        const style = styles[i % styles.length];
+        const prompt = encodeURIComponent(`${style} ${i}`);
+        const width = 600;
+        const height = 800;
         
+        const titleAdjective = adjectives[i % adjectives.length];
+        const titleNoun = nouns[(i + Math.floor(i / 10)) % nouns.length];
+
         generated.push({
             id: (i + 1).toString(),
-            artistId: artistId,
-            image: `https://images.unsplash.com/photo-${randomId}?w=600&h=800&fit=crop&q=80`,
-            title: `Artwork ${i + 1}`,
-            likes: Math.floor(Math.random() * 500),
-            description: "A unique piece of generative art.",
-            size: '18" x 24"',
-            tags: Array.from(new Set(tags)), // unique tags
-            commentsCount: Math.floor(Math.random() * 20)
+            artistId: (Math.floor(Math.random() * 5) + 1).toString(), // Ids 1-6
+            image: `https://image.pollinations.ai/prompt/${prompt}?width=${width}&height=${height}&nologo=true&seed=${i}`,
+            title: `${titleAdjective} ${titleNoun} #${i + 1}`,
+            likes: Math.floor(Math.random() * 500) + 25,
+            description: `A unique AI generated artwork exploring the themes of ${style}. Created with generative algorithms.`,
+            size: 'Digital',
+            tags: ["ai-art", "generative", ...style.split(" ").slice(0, 1)],
+            commentsCount: Math.floor(Math.random() * 15)
         });
     }
     return generated;
@@ -301,7 +408,6 @@ export const addCollectionArtwork = (userId: string, artwork: CollectionArtwork)
     let db = initializeUserDatabase();
     const newDb = db.map(user => {
         if (user.id === userId) {
-             // Check for duplicates in existing collection
              const allCollectionImages = user.collections?.flatMap(c => c.artworks).map(a => a.image) || [];
              if (allCollectionImages.includes(artwork.image)) {
                  throw new Error("You have already added this artwork to your collection.");
@@ -321,18 +427,15 @@ export const isDuplicateArtwork = (userId: string, imageBase64: string): boolean
     if (!user) return false;
 
     if (user.role === 'artist') {
-        // Check artist's portfolio (using mock data source for now, but in real app would query DB)
         const artistWorks = findArtworksByArtistId(userId);
         return artistWorks.some(work => work.image === imageBase64);
     } else {
-         // Check art lover's collections
          const collectionWorks = findCollectionArtworksByUserId(userId);
          return collectionWorks.some(work => work.image === imageBase64);
     }
 }
 
 export const deleteUserArtwork = (userId: string, artworkId: string) => {
-    // This is a mock; in a real app, you'd delete from a separate 'artworks' table.
     console.log(`Deleted artwork ${artworkId} for user ${userId}`);
 };
 
@@ -351,58 +454,170 @@ export const deleteCollectionArtwork = (userId: string, artworkId: string) => {
     saveUserDatabase(newDb);
 };
 
-// Recommendation Engine
-export const getRecommendedArtworks = (likedIds: Set<string> | string[]): Artwork[] => {
-  const likedArray = Array.from(likedIds);
-  if (likedArray.length === 0) {
-    return artworks; // Return default order if no likes
+// --- Social Feed Logic ---
+
+let socialPosts: SocialPost[] = [];
+
+try {
+  const storedPosts = localStorage.getItem('socialPosts');
+  if (storedPosts) {
+    socialPosts = JSON.parse(storedPosts);
+  } else {
+    socialPosts = [];
+    localStorage.setItem('socialPosts', JSON.stringify(socialPosts));
   }
+} catch (e) {
+  console.error("Failed to load social posts", e);
+  socialPosts = [];
+}
 
-  // 1. Analyze preferences
-  const likedObjs = artworks.filter(a => likedArray.includes(a.id));
-  
-  // Collect all tags from liked artworks
-  const likedTags = new Set<string>();
-  likedObjs.forEach(a => a.tags.forEach(t => likedTags.add(t)));
-  
-  // Collect artists the user has liked
-  const likedArtistIds = new Set<string>();
-  likedObjs.forEach(a => likedArtistIds.add(a.artistId));
+const saveSocialPosts = () => {
+    localStorage.setItem('socialPosts', JSON.stringify(socialPosts));
+};
 
-  // 2. Score items
+// --- MIXED FEED ALGORITHM ---
+
+export const getMixedFeed = (userId: string): FeedItem[] => {
+  const currentUser = findUserById(userId);
+  if (!currentUser) return [];
+
+  // 1. Get Social Posts from Connected Users & Self
+  // Users see posts from people they follow, plus their own posts.
+  const allowedAuthorIds = [...(currentUser.followingIds || []), currentUser.id];
+  
+  const relevantPosts: FeedItem[] = socialPosts
+    .filter(post => allowedAuthorIds.includes(post.authorId))
+    .map(post => ({ type: 'post', data: post }));
+
+  // 2. Get Artwork Recommendations
+  // Based on simple scoring algorithm from UserInteractions
+  const interactions = getUserInteractions(userId);
+  
+  // Calculate scores for all artworks
   const scoredArtworks = artworks.map(art => {
-      let score = 0;
+    let score = 0;
+    let reason = "Recommended for you";
 
-      // Penalize already liked items to push them to the bottom
-      if (likedArray.includes(art.id)) {
-        score -= 100;
+    // Score based on followed artist
+    if (currentUser.followingIds?.includes(art.artistId)) {
+      score += 10;
+      reason = "From an artist you follow";
+    }
+
+    // Score based on tags
+    art.tags.forEach(tag => {
+      if (interactions.tags[tag]) {
+        score += interactions.tags[tag];
+        reason = `Because you like ${tag}`;
       }
+    });
 
-      // Signal 1: Tag Matching
-      // Give points for each tag that matches a tag from a liked artwork
-      const matchingTags = art.tags.filter(t => likedTags.has(t)).length;
-      score += matchingTags * 2;
+    // Score based on specific artist affinity
+    if (interactions.artistIds[art.artistId]) {
+      score += interactions.artistIds[art.artistId];
+    }
 
-      // Signal 2: Artist Affinity
-      // Give points if the user has liked other work by this artist
-      if (likedArtistIds.has(art.artistId)) {
-        score += 5;
-      }
-      
-      // Add a tiny random factor to keep the feed feeling dynamic even with same likes
-      score += Math.random();
+    // Filter out viewed ones to encourage discovery (optional, simplistic here)
+    // For now, we just deprioritize slightly if viewed
+    if (interactions.viewedArtworks.has(art.id)) {
+      score -= 5;
+    }
 
-      return { art, score };
+    return { art, score, reason };
   });
 
-  // 3. Sort by score (descending)
-  scoredArtworks.sort((a, b) => b.score - a.score);
+  // Filter out artworks with 0 score (unless we need filler) and sort
+  const topRecommendations = scoredArtworks
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5) // Take top 5 recommendations
+    .map(item => ({ type: 'recommendation' as const, data: item.art, reason: item.reason }));
 
-  return scoredArtworks.map(item => item.art);
+  // If no recommendations (new user), allow some random popular ones
+  if (topRecommendations.length === 0) {
+     const randomPicks = artworks.slice(0, 3).map(art => ({
+       type: 'recommendation' as const, 
+       data: art, 
+       reason: "Popular on Regestra"
+     }));
+     topRecommendations.push(...randomPicks);
+  }
+
+  // 3. Interleave / Merge
+  // Simple merge: Add a recommendation every 2 posts
+  const combinedFeed: FeedItem[] = [...relevantPosts];
+  
+  topRecommendations.forEach((rec, index) => {
+    // Insert at specific intervals
+    const position = (index + 1) * 2; 
+    if (position < combinedFeed.length) {
+      combinedFeed.splice(position, 0, rec);
+    } else {
+      combinedFeed.push(rec);
+    }
+  });
+
+  return combinedFeed;
+};
+
+// Legacy export kept for compatibility if needed, but UI should move to getMixedFeed
+export const getSocialPosts = (): SocialPost[] => {
+    return [...socialPosts].sort((a, b) => b.timestamp - a.timestamp);
+};
+
+export const createSocialPost = (userId: string, content: string, image?: string): SocialPost => {
+    const newPost: SocialPost = {
+        id: `post_${Date.now()}`,
+        authorId: userId,
+        content,
+        image,
+        timestamp: Date.now(),
+        timestampStr: "Just now",
+        likes: [],
+        comments: []
+    };
+    socialPosts.unshift(newPost);
+    saveSocialPosts();
+    return newPost;
+};
+
+export const toggleLikeSocialPost = (postId: string, userId: string): SocialPost[] => {
+    socialPosts = socialPosts.map(post => {
+        if (post.id === postId) {
+            const likes = new Set(post.likes);
+            if (likes.has(userId)) {
+                likes.delete(userId);
+            } else {
+                likes.add(userId);
+            }
+            // Record interaction
+            recordInteraction(userId, "social_interaction", 'like'); // Generic interaction
+            return { ...post, likes: Array.from(likes) };
+        }
+        return post;
+    });
+    saveSocialPosts();
+    return getSocialPosts(); // Logic in UI will handle feed refresh
+};
+
+export const addCommentToSocialPost = (postId: string, userId: string, text: string): SocialPost[] => {
+    socialPosts = socialPosts.map(post => {
+        if (post.id === postId) {
+            const newComment: Comment = {
+                id: `cmt_${Date.now()}`,
+                userId,
+                text,
+                timestamp: "Just now"
+            };
+            return { ...post, comments: [...post.comments, newComment] };
+        }
+        return post;
+    });
+    saveSocialPosts();
+    return getSocialPosts();
 };
 
 // --- Messaging Mock Data ---
-// Initialize from local storage if available to persist chats across reloads
 let conversations: Conversation[] = [];
 
 try {
@@ -445,7 +660,6 @@ export const sendMessage = (conversationId: string, senderId: string, text: stri
 };
 
 export const startConversation = (userId1: string, userId2: string): string => {
-    // Check if exists
     let conv = conversations.find(c => c.participants.includes(userId1) && c.participants.includes(userId2));
     if (!conv) {
         conv = {

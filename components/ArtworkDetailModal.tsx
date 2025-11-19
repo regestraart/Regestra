@@ -1,11 +1,14 @@
 
-import React, { useEffect, useState } from 'react';
+
+
+import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { X, Heart, MessageCircle, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
-import { User, Artwork, CollectionArtwork } from '../data/mock';
+import { User, Artwork, CollectionArtwork, recordInteraction } from '../data/mock';
 import { createUrl } from '../utils';
 import ConfirmationModal from './ConfirmationModal';
+import { useUser } from '../context/UserContext';
 
 type ModalArtwork = Artwork | CollectionArtwork;
 
@@ -20,7 +23,11 @@ interface ArtworkDetailModalProps {
 
 const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist, onClose, isLiked, onToggleLike, onDelete }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
+  const { currentUser } = useUser();
+  
+  // Interaction Tracking
+  const openTimeRef = useRef<number>(Date.now());
+  
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -29,11 +36,19 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
     };
     window.addEventListener('keydown', handleEsc);
     document.body.style.overflow = 'hidden';
+    
     return () => {
       window.removeEventListener('keydown', handleEsc);
       document.body.style.overflow = 'auto';
+      
+      // Calculate linger time on unmount/close
+      const duration = Date.now() - openTimeRef.current;
+      // If open for more than 3 seconds, count as a "linger" interaction
+      if (duration > 3000 && currentUser) {
+          recordInteraction(currentUser.id, artwork.id, 'linger');
+      }
     };
-  }, [onClose]);
+  }, [onClose, artwork.id, currentUser]);
 
   if (!artwork) return null;
   
