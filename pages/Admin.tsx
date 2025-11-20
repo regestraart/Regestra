@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect } from 'react';
 import { getAllUsers, User, getSystemAnalytics, SystemAnalytics } from '../data/mock';
 import { Button } from '../components/ui/Button';
@@ -51,11 +49,12 @@ export default function Admin() {
 
   // --- Handlers ---
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (inputEmail.toLowerCase() === adminEmail.toLowerCase() && inputPass === adminPass) {
       setIsAuthenticated(true);
-      setUsers(getAllUsers());
+      const fetchedUsers = await getAllUsers();
+      setUsers(fetchedUsers);
       setSettingsEmail(adminEmail); // Pre-fill settings
       setError('');
       setInputPass(''); // Clear password from state
@@ -227,6 +226,10 @@ export default function Admin() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Admin Access</h1>
             <p className="text-gray-600 mt-2">Restricted area. Authorized personnel only.</p>
+             <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-left">
+                <p className="text-xs text-yellow-800 font-semibold flex items-center gap-1"><AlertTriangle className="w-3 h-3"/> Security Notice:</p>
+                <p className="text-xs text-yellow-700 mt-1">This is a client-side demo admin panel. In a real production environment, this would require backend Role-Based Access Control (RBAC) and should never store credentials in the browser.</p>
+            </div>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">

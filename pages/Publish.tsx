@@ -1,11 +1,12 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createUrl } from "../utils";
 import { Button } from "../components/ui/Button";
 import { Label } from "../components/ui/Label";
-import { CheckCircle, ArrowLeft, Globe } from "lucide-react";
+import { CheckCircle, ArrowLeft, Globe, LoaderCircle, AlertTriangle } from "lucide-react";
 import { useUser } from "../context/UserContext";
+import { publishUserArtwork } from "../data/mock";
 
 interface LocationState {
   image?: string;
@@ -19,10 +20,27 @@ export default function Publish() {
   const location = useLocation();
   const { currentUser } = useUser();
   const { image, title, description, tags } = (location.state as LocationState) || {};
+  
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handlePublish = () => {
-    if (currentUser) {
-      navigate(createUrl('/profile/:userId', { userId: currentUser.id }));
+  const handlePublish = async () => {
+    if (currentUser && image && title) {
+      setIsPublishing(true);
+      setError(null);
+      try {
+        await publishUserArtwork(currentUser.id, {
+            title,
+            description: description || '',
+            tags: tags || '',
+            image,
+            visibility: 'public'
+        });
+        navigate(createUrl('/profile/:userId', { userId: currentUser.id }));
+      } catch (err: any) {
+          setError("Failed to publish artwork. Please try again.");
+          setIsPublishing(false);
+      }
     }
   };
 
@@ -56,9 +74,9 @@ export default function Publish() {
               <div className="p-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">{title || 'Untitled'}</h3>
                 <p className="text-gray-600 mb-4">{description || 'No description provided'}</p>
-                {tags && (
+                {(tags || '').length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {tags.split(',').map((tag, index) => (
+                    {(tags || '').split(',').map((tag, index) => (
                       <span key={index} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
                         #{tag.trim()}
                       </span>
@@ -72,6 +90,12 @@ export default function Publish() {
           <div>
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Publishing Options</h2>
             <div className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
+              {error && (
+                  <div className="bg-red-50 text-red-700 p-3 rounded-lg flex items-center gap-2 text-sm">
+                      <AlertTriangle className="w-4 h-4" />
+                      {error}
+                  </div>
+              )}
               <div>
                 <Label className="text-sm font-medium text-gray-900 mb-3 block">Visibility</Label>
                 <div className="space-y-3">
@@ -113,9 +137,9 @@ export default function Publish() {
                 </div>
               </div>
 
-              <Button onClick={handlePublish} disabled={!image || !title} className="w-full h-12 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-xl font-semibold mt-6 disabled:opacity-50 disabled:cursor-not-allowed">
-                <CheckCircle className="w-5 h-5 mr-2" />
-                Publish Artwork
+              <Button onClick={handlePublish} disabled={!image || !title || isPublishing} className="w-full h-12 bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 text-white rounded-xl font-semibold mt-6 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isPublishing ? <LoaderCircle className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5 mr-2" />}
+                {isPublishing ? "Publishing..." : "Publish Artwork"}
               </Button>
 
               <p className="text-xs text-center text-gray-500">

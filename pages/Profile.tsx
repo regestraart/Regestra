@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { createUrl } from "../utils";
@@ -12,9 +11,7 @@ import ConfirmationModal from "../components/ConfirmationModal";
 import ShareModal from "../components/ShareModal";
 
 const BehanceIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-    <path d="M7.938 10.148h3.324c0-1.854-1.48-1.854-3.324-1.854zm12.562 1.332c0-1.782-1.337-3.159-3.417-3.159H9.412V2.83h7.94c1.854 0 2.923 1.164 2.923 2.538h-2.923c0-.865-.63-1.02-1.289-1.02H11.5v3.13h5.717c1.94 0 3.295 1.164 3.295 3.015 0 1.996-1.508 3.102-3.417 3.102h-5.6v5.253h5.542c2.163 0 3.53-.992 3.53-2.997H17.27c0 .942-.717 1.39-1.684 1.39h-3.13V15.7h5.366c2.05 0 3.446-1.193 3.446-3.22zM8.562 18.168h-5.04V6.832h5.04c2.51 0 4.218 1.536 4.218 3.668 0 2.22-1.737 3.668-4.218 3.668zM3 21.168h6.19c3.96 0 6.72-2.135 6.72-6.192C15.91 10.95 13.12 9 9.19 9H3v12.168z" />
-  </svg>
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M7.938 10.148h3.324c0-1.854-1.48-1.854-3.324-1.854zm12.562 1.332c0-1.782-1.337-3.159-3.417-3.159H9.412V2.83h7.94c1.854 0 2.923 1.164 2.923 2.538h-2.923c0-.865-.63-1.02-1.289-1.02H11.5v3.13h5.717c1.94 0 3.295 1.164 3.295 3.015 0 1.996-1.508 3.102-3.417 3.102h-5.6v5.253h5.542c2.163 0 3.53-.992 3.53-2.997H17.27c0 .942-.717 1.39-1.684 1.39h-3.13V15.7h5.366c2.05 0 3.446-1.193 3.446-3.22zM8.562 18.168h-5.04V6.832h5.04c2.51 0 4.218 1.536 4.218 3.668 0 2.22-1.737 3.668-4.218 3.668zM3 21.168h6.19c3.96 0 6.72-2.135 6.72-6.192C15.91 10.95 13.12 9 9.19 9H3v12.168z" /></svg>
 );
 
 type SelectedArtwork = (Artwork | CollectionArtwork) & { artist?: Partial<User> & { name: string } };
@@ -31,302 +28,191 @@ export default function Profile() {
   const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
-    const user = findUserById(userId);
-    setProfileUser(user);
-    if (user?.role === 'artist') {
-      setUserArtworks(findArtworksByArtistId(user.id));
-      setActiveTab('artworks');
-    } else if (user?.role === 'artLover') {
-      setUserArtworks(findCollectionArtworksByUserId(user.id));
-      setActiveTab('collections');
+    const loadProfile = async () => {
+        const user = await findUserById(userId);
+        setProfileUser(user || null);
+        if (user) {
+            if (user.role === 'artist') {
+                const arts = await findArtworksByArtistId(user.id);
+                setUserArtworks(arts);
+                setActiveTab('artworks');
+            } else {
+                const cols = await findCollectionArtworksByUserId(user.id);
+                setUserArtworks(cols);
+                setActiveTab('collections');
+            }
+        }
     }
-  }, [userId, currentUser]); // Reload if currentUser changes (e.g. follow status update)
+    loadProfile();
+  }, [userId, currentUser]);
 
-  const toggleLike = (artworkId: string) => {
+  const toggleLike = async (artworkId: string) => {
     if (!currentUser) return;
-    const updatedUser = toggleArtworkLike(currentUser.id, artworkId);
+    const updatedUser = await toggleArtworkLike(currentUser.id, artworkId);
     setCurrentUser(updatedUser);
   };
 
-  const handleCloseModal = () => setSelectedArtwork(null);
-
-  const handleDeleteArtwork = () => {
-    if (!selectedArtwork || !profileUser) return;
-
-    if (profileUser.role === 'artist') {
-        deleteUserArtwork(profileUser.id, selectedArtwork.id);
-    } else if (profileUser.role === 'artLover') {
-        deleteCollectionArtwork(profileUser.id, selectedArtwork.id);
-    }
-
-    setUserArtworks(currentArtworks => currentArtworks.filter(art => art.id !== selectedArtwork.id));
-    setShowDeleteConfirm(false);
-    handleCloseModal();
-  };
-  
-  const handleAddArtwork = (newArtwork: CollectionArtwork) => {
-    if(currentUser) {
-      addCollectionArtwork(currentUser.id, newArtwork);
-      setUserArtworks(prev => [newArtwork, ...prev]);
-      setShowAddToCollection(false);
-    }
-  };
-
-  const handleFollowToggle = () => {
+  const handleFollowToggle = async () => {
     if (currentUser && profileUser) {
-      try {
-        const updatedCurrentUser = toggleFollowUser(currentUser.id, profileUser.id);
+        const updatedCurrentUser = await toggleFollowUser(currentUser.id, profileUser.id);
         setCurrentUser(updatedCurrentUser);
-        // Refetch profile user to update follower count
-        const updatedProfileUser = findUserById(profileUser.id);
+        const updatedProfileUser = await findUserById(profileUser.id);
         setProfileUser(updatedProfileUser || null);
-      } catch (e) {
-        console.error("Failed to follow user", e);
-      }
     }
   };
 
-  if (!profileUser) {
-    return <div>User not found or loading...</div>;
-  }
+  const handleAddToCollection = async (newArtwork: CollectionArtwork) => {
+    if (currentUser) {
+        await addCollectionArtwork(currentUser.id, newArtwork);
+        setShowAddToCollection(false);
+        if (profileUser?.id === currentUser.id && activeTab === 'collections') {
+             const cols = await findCollectionArtworksByUserId(currentUser.id);
+             setUserArtworks(cols);
+        }
+    }
+  };
+
+  const handleDeleteArtwork = async () => {
+    if (selectedArtwork && profileUser) {
+        if (activeTab === 'collections') {
+            await deleteCollectionArtwork(profileUser.id, selectedArtwork.id);
+            const cols = await findCollectionArtworksByUserId(profileUser.id);
+            setUserArtworks(cols);
+        } else {
+            await deleteUserArtwork(profileUser.id, selectedArtwork.id);
+             const arts = await findArtworksByArtistId(profileUser.id);
+             setUserArtworks(arts);
+        }
+        setShowDeleteConfirm(false);
+        setSelectedArtwork(null);
+    }
+  };
+
+  if (!profileUser) return <div>Loading profile...</div>;
 
   const isOwnProfile = currentUser?.id === profileUser.id;
   const isArtist = profileUser.role === 'artist';
   const isFollowing = currentUser?.followingIds?.includes(profileUser.id);
 
-  const getProfileUserLikedArtworks = () => {
-    if (profileUser.likedArtworkIds) {
-        return allArtworks.filter(art => profileUser.likedArtworkIds!.includes(art.id));
-    }
-    return [];
-  }
-  
+  const likedArtworks = allArtworks.filter(art => profileUser.likedArtworkIds?.includes(art.id));
+
   let gridContent: (Artwork | CollectionArtwork)[] = [];
-  if (isArtist && activeTab === 'artworks') {
-    gridContent = userArtworks;
-  } else if (!isArtist && activeTab === 'collections') {
-    gridContent = userArtworks;
-  } else if (activeTab === 'liked') {
-    gridContent = getProfileUserLikedArtworks();
-  }
-
-  const handleArtworkClick = (artwork: Artwork | CollectionArtwork) => {
-    let artistData: (Partial<User> & { name: string }) | undefined;
-    if ('artistId' in artwork) {
-        artistData = findUserById(artwork.artistId);
-        if (!artistData) {
-            console.warn(`Artist with ID ${artwork.artistId} not found.`);
-        }
-    } else {
-        artistData = { name: artwork.artistName };
-    }
-    setSelectedArtwork({ ...artwork, artist: artistData });
-  };
-  
-  const canDelete = isOwnProfile && selectedArtwork;
-  
-  const likedArtForMosaic = getProfileUserLikedArtworks().slice(0, 4);
-
-  const artistTabs = ['Artworks', 'Liked'];
-  const artLoverTabs = ['Collections', 'Liked'];
-  const tabs = isArtist ? artistTabs : artLoverTabs;
+  if (isArtist && activeTab === 'artworks') gridContent = userArtworks;
+  else if (!isArtist && activeTab === 'collections') gridContent = userArtworks;
+  else if (activeTab === 'liked') gridContent = likedArtworks;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="relative">
-        <div className="h-64 md:h-80 bg-gray-200">
+      {/* Cover Image */}
+      <div className="h-64 md:h-80 bg-gray-200">
           {profileUser.coverImage ? (
             <img src={profileUser.coverImage} alt="Cover" className="w-full h-full object-cover object-center" />
-          ) : !isArtist ? (
-            <div className="w-full h-full grid grid-cols-2 md:grid-cols-4 gap-0.5">
-                {likedArtForMosaic.map(art => (
-                    <div key={art.id} className="overflow-hidden h-full">
-                        <img src={art.image} alt={art.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-                    </div>
-                ))}
-                {Array(4 - likedArtForMosaic.length).fill(0).map((_, i) => <div key={i} className="bg-gradient-to-br from-purple-50 to-blue-50"></div>)}
-            </div>
           ) : <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100"></div>}
-        </div>
-
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      </div>
+      
+      {/* Profile Info */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="relative -mt-20 mb-8">
               <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8">
                 <div className="flex flex-col md:flex-row items-start gap-6">
                   <div className="relative -mt-24 flex-shrink-0">
-                    <img src={profileUser.avatar} alt={profileUser.name} className="w-32 h-32 rounded-3xl border-4 border-white shadow-lg object-cover bg-gray-100" />
+                    <img src={profileUser.avatar} alt={profileUser.name} className="w-32 h-32 rounded-3xl border-4 border-white shadow-lg object-cover bg-gray-100 object-center" />
                   </div>
-
                   <div className="flex-1 w-full">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-                      <div>
-                        <h1 className="text-3xl font-bold text-gray-900 mb-1">{profileUser.name}</h1>
-                        <p className="text-gray-600">@{profileUser.username}</p>
-                         {!isArtist && <p className="text-sm font-semibold text-purple-600 mt-1">Art Enthusiast</p>}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {isOwnProfile ? (
-                          <Link to="/edit-profile">
-                            <Button variant="outline" className="rounded-full"><Settings className="w-4 h-4 mr-2" /> Edit Profile</Button>
-                          </Link>
-                        ) : (
-                          <Button 
-                            className={`rounded-full px-6 min-w-[140px] transition-all duration-200 ${
-                              isFollowing 
-                                ? 'bg-white border-2 border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300' 
-                                : 'bg-gradient-to-r from-purple-600 to-blue-500 text-white hover:opacity-90 shadow-md hover:shadow-lg'
-                            }`} 
-                            variant="ghost"
-                            onClick={handleFollowToggle}
-                            disabled={!currentUser}
-                          >
-                            {isFollowing ? (
-                              <><UserCheck className="w-4 h-4 mr-2" /> Connected</>
+                     <div className="flex justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">{profileUser.name}</h1>
+                            <p className="text-gray-600">@{profileUser.username}</p>
+                        </div>
+                        <div className="flex gap-3">
+                            <Button variant="ghost" size="icon" className="rounded-full border border-gray-200" onClick={() => setShowShareModal(true)}>
+                              <Share2 className="w-5 h-5 text-gray-600" />
+                            </Button>
+                            {isOwnProfile ? (
+                                <Link to="/edit-profile"><Button variant="outline" className="rounded-full">Edit Profile</Button></Link>
                             ) : (
-                              <><UserPlus className="w-4 h-4 mr-2" /> Connect</>
+                                <Button onClick={handleFollowToggle} className="rounded-full">
+                                    {isFollowing ? "Connected" : "Connect"}
+                                </Button>
                             )}
-                          </Button>
-                        )}
-                        <Button 
-                            variant="outline" 
-                            className="rounded-full" 
-                            onClick={() => setShowShareModal(true)}
-                        >
-                            <Share2 className="w-4 h-4 mr-2" /> Share
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="text-gray-700 mb-4 max-w-2xl">{profileUser.bio}</p>
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-600">
-                      {profileUser.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4" /><span>{profileUser.location}</span></div>}
-                      {isArtist && profileUser.website && <div className="flex items-center gap-1"><LinkIcon className="w-4 h-4" /><a href={`http://${profileUser.website}`} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">{profileUser.website}</a></div>}
-                      <div className="flex items-center gap-1"><Calendar className="w-4 h-4" /><span>Joined {profileUser.joinDate}</span></div>
-                    </div>
-                     {isArtist && profileUser.socials && (
-                        <div className="flex items-center gap-4 mt-4">
-                            {profileUser.socials.instagram && <a href="#" className="text-gray-500 hover:text-gray-800"><Instagram className="w-5 h-5" /></a>}
-                            {profileUser.socials.twitter && <a href="#" className="text-gray-500 hover:text-gray-800"><Twitter className="w-5 h-5" /></a>}
-                            {profileUser.socials.behance && <a href="#" className="text-gray-500 hover:text-gray-800"><BehanceIcon className="w-5 h-5" /></a>}
-                            {profileUser.contactEmail && <a href={`mailto:${profileUser.contactEmail}`} className="text-gray-500 hover:text-gray-800"><Mail className="w-5 h-5" /></a>}
                         </div>
-                    )}
+                     </div>
+                     <p className="mt-4 text-gray-700">{profileUser.bio}</p>
                   </div>
                 </div>
-
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                    <div className="grid grid-cols-3 gap-4 w-full">
-                        <div className="text-center group cursor-default">
-                            <p className="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">{userArtworks.length}</p>
-                            <p className="text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">{isArtist ? 'Artworks' : 'Collections'}</p>
-                        </div>
-                        <div className="text-center border-l border-r border-gray-100 group cursor-default">
-                            <p className="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">{getProfileUserLikedArtworks().length}</p>
-                            <p className="text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">Liked</p>
-                        </div>
-                        <div className="text-center group cursor-default">
-                            <p className="text-2xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">{profileUser.stats.followers}</p>
-                            <p className="text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">Connections</p>
-                        </div>
-                    </div>
-                    
-                    {isArtist && profileUser.commissionStatus && profileUser.commissionStatus !== 'Not Available' && (
-                        <div className="mt-6 flex justify-center">
-                            <div className={`inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm border ${profileUser.commissionStatus === 'Open' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                                <span className={`w-2 h-2 rounded-full mr-2 ${profileUser.commissionStatus === 'Open' ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                                {profileUser.commissionStatus} for Commissions
-                            </div>
-                        </div>
-                    )}
+                
+                {/* Stats */}
+                <div className="mt-8 pt-6 border-t border-gray-200 grid grid-cols-3 gap-4 text-center">
+                    <div><span className="font-bold block text-xl">{userArtworks.length}</span><span className="text-gray-500 text-sm">Works</span></div>
+                    <div><span className="font-bold block text-xl">{likedArtworks.length}</span><span className="text-gray-500 text-sm">Liked</span></div>
+                    <div><span className="font-bold block text-xl">{profileUser.stats.followers}</span><span className="text-gray-500 text-sm">Connections</span></div>
                 </div>
+                
+                {/* Commission Status - Centered */}
+                {isArtist && (
+                    <div className="flex justify-center mt-6">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                            profileUser.commissionStatus === 'Open' ? 'bg-green-100 text-green-800' :
+                            profileUser.commissionStatus === 'Closed' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                        }`}>
+                            Commissions: {profileUser.commissionStatus || 'Not Available'}
+                        </span>
+                    </div>
+                )}
               </div>
             </div>
-        </div>
-      </div>
-      
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-2xl shadow-sm mb-6 overflow-hidden">
-          <div className="flex items-center justify-between px-6 border-b border-gray-200">
-            <div className="flex items-center gap-8">
-                {tabs.map((tab) => (
-                  <button key={tab} onClick={() => setActiveTab(tab.toLowerCase())} className={`py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.toLowerCase() ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}>
-                    {tab}
-                  </button>
+
+            {/* Tabs & Grid */}
+             <div className="bg-white rounded-2xl shadow-sm mb-6 overflow-hidden">
+                <div className="flex px-6 border-b border-gray-200 gap-8">
+                    <button onClick={() => setActiveTab(isArtist ? 'artworks' : 'collections')} className={`py-4 border-b-2 ${activeTab !== 'liked' ? 'border-purple-600 text-purple-600' : 'border-transparent'}`}>{isArtist ? 'Artworks' : 'Collections'}</button>
+                    <button onClick={() => setActiveTab('liked')} className={`py-4 border-b-2 ${activeTab === 'liked' ? 'border-purple-600 text-purple-600' : 'border-transparent'}`}>Liked</button>
+                </div>
+             </div>
+             
+             {!isArtist && activeTab === 'collections' && isOwnProfile && (
+                 <div className="mb-6 text-center">
+                     <Button onClick={() => setShowAddToCollection(true)} className="rounded-full"><Plus className="w-4 h-4 mr-2"/> Add to Collection</Button>
+                 </div>
+             )}
+
+             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+                {gridContent.map(artwork => (
+                    <div key={artwork.id} onClick={async () => {
+                        const artist = await findUserById('artistId' in artwork ? artwork.artistId : undefined);
+                        setSelectedArtwork({ ...artwork, artist: artist ? { ...artist, name: artist.name } : { name: artwork.title } });
+                    }} className="aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden cursor-pointer">
+                        <img src={artwork.image} className="w-full h-full object-cover hover:scale-110 transition-transform" />
+                    </div>
                 ))}
-            </div>
-             {isOwnProfile && isArtist && (
-                <Link to="/upload">
-                    <Button><Upload className="w-4 h-4 mr-2" /> Upload Artwork</Button>
-                </Link>
-            )}
-             {isOwnProfile && !isArtist && activeTab === 'collections' && (
-                <Button onClick={() => setShowAddToCollection(true)}>
-                    <Plus className="w-4 h-4 mr-2" /> Add Artwork
-                </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-          {gridContent.map((artwork) => {
-            const isLiked = currentUser?.likedArtworkIds?.includes(artwork.id) || false;
-            const baseLikes = ('likes' in artwork && artwork.likes) || 0;
-            const currentLikes = baseLikes; // baseLikes includes initial count, we don't increment client-side here to avoid confusion, let mock handle sync
-            
-            return (
-              <div key={artwork.id} onClick={() => handleArtworkClick(artwork)} className="group relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer">
-                <img src={artwork.image} alt={artwork.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <h3 className="font-semibold mb-1 line-clamp-1">{artwork.title}</h3>
-                    <div className="flex items-center gap-1 text-sm">
-                      <Heart className={`w-4 h-4 ${isLiked ? 'text-red-500 fill-current' : ''}`} />
-                      <span>{currentLikes}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {gridContent.length === 0 && (
-            <div className="text-center py-16 text-gray-500">
-                <h3 className="text-xl font-semibold">Nothing to see here yet.</h3>
-                <p>This collection is currently empty.</p>
-            </div>
-        )}
+             </div>
       </div>
 
       {selectedArtwork && (
         <ArtworkDetailModal 
           artwork={selectedArtwork}
           artist={selectedArtwork.artist}
-          onClose={handleCloseModal}
+          onClose={() => setSelectedArtwork(null)}
           isLiked={currentUser?.likedArtworkIds?.includes(selectedArtwork.id) || false}
           onToggleLike={() => toggleLike(selectedArtwork.id)}
-          onDelete={canDelete ? () => setShowDeleteConfirm(true) : undefined}
+          onDelete={isOwnProfile ? handleDeleteArtwork : undefined}
         />
       )}
-      {showAddToCollection && (
-        <AddToCollectionModal 
-            onClose={() => setShowAddToCollection(false)}
-            onAddArtwork={handleAddArtwork}
-        />
-      )}
-      {showDeleteConfirm && selectedArtwork && (
-        <ConfirmationModal 
-          onClose={() => setShowDeleteConfirm(false)}
-          onConfirm={handleDeleteArtwork}
-          title="Delete Artwork"
-          description="Are you sure you want to delete this artwork? This action is irreversible and the artwork will be permanently removed."
-          confirmText="Delete Forever"
-        />
-      )}
+
       {showShareModal && profileUser && (
         <ShareModal 
-            onClose={() => setShowShareModal(false)}
-            url={window.location.href}
-            title={`Check out ${profileUser.name} on Regestra`}
+          onClose={() => setShowShareModal(false)}
+          url={window.location.href}
+          title={`${profileUser.name} on Regestra`}
         />
+      )}
+
+      {showAddToCollection && (
+          <AddToCollectionModal 
+            onClose={() => setShowAddToCollection(false)}
+            onAddArtwork={handleAddToCollection}
+          />
       )}
     </div>
   );

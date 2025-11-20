@@ -1,30 +1,11 @@
 
+import { supabase } from '../lib/supabase';
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// --- Interfaces (Kept consistent with DB schema) ---
 
 export interface User {
   id: string;
   email: string;
-  password?: string; // Should not be passed to client-side after auth
   role: 'artist' | 'artLover';
   name: string;
   username: string;
@@ -49,8 +30,10 @@ export interface User {
     liked?: number;
   };
   likedArtworkIds: string[];
-  followingIds: string[]; // New field for connections
+  followingIds: string[]; 
   collections?: Collection[];
+  // New: Preferences stored in DB
+  preferences: InteractionData;
 }
 
 export interface Artwork {
@@ -70,19 +53,19 @@ export interface Message {
   senderId: string;
   text: string;
   timestamp: string;
-  timestampRaw: number; // For sorting
+  timestampRaw: number;
   isHidden?: boolean;
 }
 
 export interface Conversation {
   id: string;
-  participants: string[]; // User IDs
+  participants: string[]; 
   messages: Message[];
   lastMessage: string;
-  lastMessageTimestamp: number; // Changed to number for easier sorting
-  unreadCount: number; // View property for UI
-  unreadCounts?: Record<string, number>; // Storage property for per-user counts
-  isHidden?: boolean; // Dynamically added property
+  lastMessageTimestamp: number;
+  unreadCount: number;
+  unreadCounts?: Record<string, number>;
+  isHidden?: boolean;
 }
 
 export interface CollectionArtwork {
@@ -112,31 +95,42 @@ export interface Comment {
 export interface SocialPost {
   id: string;
   authorId: string;
-  content: string; // Text/Article
-  image?: string; // Optional image
-  timestamp: number; // Unix timestamp for easier sorting
-  timestampStr: string; // Display string
-  likes: string[]; // Array of user IDs who liked it
+  content: string;
+  image?: string;
+  timestamp: number;
+  timestampStr: string;
+  likes: string[];
   comments: Comment[];
+  author?: {
+    name: string;
+    avatar: string;
+  };
 }
 
 export interface Notification {
   id: string;
-  userId: string; // Recipient
+  userId: string;
   type: 'like' | 'comment' | 'follow';
-  actorId: string; // Who performed the action
+  actorId: string;
   actorName: string;
   actorAvatar: string;
-  contentPreview?: string; // Snippet of comment or post
+  contentPreview?: string;
   time: string;
   unread: boolean;
   timestamp: number;
 }
 
+export interface FeedItem {
+  type: 'post' | 'recommendation';
+  data: any;
+  reason?: string;
+  isHidden?: boolean;
+}
+
 export interface SystemAnalytics {
-  avgSessionFrequency: number; // Sessions per day
-  avgSessionDuration: number; // Minutes
-  dailyTimeSpent: number; // Minutes
+  avgSessionFrequency: number;
+  avgSessionDuration: number;
+  dailyTimeSpent: number;
   postsPerActiveUser: number;
   commentsPerActiveUser: number;
   likesPerActiveUser: number;
@@ -146,470 +140,15 @@ export interface SystemAnalytics {
   activeUsers: number;
 }
 
-// New Interface for Feed Items
-export type FeedItem = 
-  | { type: 'post'; data: SocialPost; isHidden?: boolean }
-  | { type: 'recommendation'; data: Artwork; reason: string; isHidden?: boolean };
-
-// --- LocalStorage User Database ---
-const initialUsers: User[] = [
-  {
-    id: '1',
-    email: 'sarah@test.com',
-    password: 'password123',
-    role: 'artist',
-    name: "Sarah Chen",
-    username: "sarahchen",
-    avatar: "https://i.pravatar.cc/300?img=1",
-    coverImage: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&h=300&fit=crop",
-    bio: "Digital artist & illustrator | Creating colorful worlds | Available for commissions 🎨",
-    location: "San Francisco, CA",
-    website: "sarahchen.art",
-    joinDate: "January 2023",
-    commissionStatus: 'Open',
-    contactEmail: 'hello@sarahchen.art',
-    socials: { instagram: 'sarahchen.art', twitter: 'sarahchen', behance: 'sarahchen' },
-    stats: { artworks: 3, followers: 1234, following: 567, liked: 1 },
-    likedArtworkIds: ['2'],
-    followingIds: ['3', '4']
-  },
-  {
-    id: '2',
-    email: 'alex@test.com',
-    password: 'password123',
-    role: 'artLover',
-    name: "Alex Johnson",
-    username: "alexj",
-    avatar: "https://i.pravatar.cc/300?img=11",
-    coverImage: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200&h=300&fit=crop",
-    bio: "Lover of all things abstract and colorful. Building my personal collection one piece at a time.",
-    location: "New York, NY",
-    joinDate: "March 2023",
-    stats: { liked: 3, collections: 1, following: 89, followers: 120 },
-    likedArtworkIds: ['1', '5', '6'],
-    followingIds: ['1'],
-    collections: [
-        {
-            id: 'col1',
-            name: 'Main Collection',
-            artworks: [
-                { id: 'c1', image: 'https://images.unsplash.com/photo-1536924940846-227afb31e2a5?w=600&h=800&fit=crop', title: 'Galaxy Rising', artistName: 'Unknown Artist' }
-            ]
-        }
-    ]
-  },
-  { id: '3', email: 'marcus@test.com', password: 'password123', role: 'artist', name: "Marcus Williams", username: "marcusart", avatar: "https://i.pravatar.cc/150?img=2", bio: "Surreal artist exploring the urban dreamscape.", joinDate: "Feb 2023", stats: { artworks: 1, followers: 800, following: 300, liked: 0 }, likedArtworkIds: [], followingIds: [] },
-  { id: '4', email: 'emma@test.com', password: 'password123', role: 'artist', name: "Emma Rodriguez", username: "emmacreates", avatar: "https://i.pravatar.cc/150?img=3", bio: "Painter obsessed with color and texture.", joinDate: "April 2023", stats: { artworks: 1, followers: 2500, following: 450, liked: 0 }, likedArtworkIds: [], followingIds: [] },
-  { id: '5', email: 'lisa@test.com', password: 'password123', role: 'artist', name: "Lisa Thompson", username: "lisadesigns", avatar: "https://i.pravatar.cc/150?img=5", bio: "Minimalist illustrator creating geometric wonders.", joinDate: "May 2023", stats: { artworks: 1, followers: 1100, following: 200, liked: 0 }, likedArtworkIds: [], followingIds: [] }
-];
-
-let userDatabase: User[] | null = null;
-
-// --- Notification System ---
-let notifications: Notification[] = [];
-
-try {
-  const storedNotifs = localStorage.getItem('notifications');
-  if (storedNotifs) {
-    notifications = JSON.parse(storedNotifs);
-  }
-} catch (e) {
-  console.error("Failed to load notifications", e);
-  notifications = [];
-}
-
-const saveNotifications = () => {
-  localStorage.setItem('notifications', JSON.stringify(notifications));
-};
-
-export const createNotification = (recipientId: string, type: 'like' | 'comment' | 'follow', actorId: string, contentPreview?: string) => {
-  if (recipientId === actorId) return; // Don't notify self
-  
-  const actor = findUserById(actorId);
-  if (!actor) return;
-
-  const newNotif: Notification = {
-    id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    userId: recipientId,
-    type,
-    actorId,
-    actorName: actor.name,
-    actorAvatar: actor.avatar,
-    contentPreview,
-    time: "Just now",
-    unread: true,
-    timestamp: Date.now()
-  };
-  
-  notifications.unshift(newNotif);
-  saveNotifications();
-};
-
-export const getNotificationsForUser = (userId: string): Notification[] => {
-  return notifications
-    .filter(n => n.userId === userId)
-    .sort((a, b) => b.timestamp - a.timestamp);
-};
-
-export const getUnreadNotificationCount = (userId: string): number => {
-  return notifications.filter(n => n.userId === userId && n.unread).length;
-};
-
-export const markNotificationsAsRead = (userId: string) => {
-  let changed = false;
-  notifications = notifications.map(n => {
-    if (n.userId === userId && n.unread) {
-      changed = true;
-      return { ...n, unread: false };
-    }
-    return n;
-  });
-  if (changed) saveNotifications();
-};
-
-export const deleteNotification = (id: string) => {
-  notifications = notifications.filter(n => n.id !== id);
-  saveNotifications();
-};
-
-export const clearAllNotifications = (userId: string) => {
-  notifications = notifications.filter(n => n.userId !== userId);
-  saveNotifications();
-};
-
-
-// --- Interaction Tracking System ---
-// Stores weighted interests based on user actions
-interface UserInteractions {
-  tags: Record<string, number>; // tag -> score
-  artistIds: Record<string, number>; // artistId -> score
-  viewedArtworks: Set<string>;
-  dismissedRecommendations: Set<string>; // Permanently deleted/dismissed
-  hiddenPostIds: Set<string>; // Temporarily hidden posts
-  hiddenArtworkIds: Set<string>; // Temporarily hidden artworks
-  hiddenConversationIds: Set<string>;
-  deletedConversationIds: Set<string>;
-  hiddenMessageIds: Set<string>;
-  conversationClearedAt: Record<string, number>; // conversationId -> timestamp
-}
-
-// Mock in-memory storage for interactions
-const userInteractionsMap: Record<string, UserInteractions> = {};
-let isInteractionsLoaded = false;
-
-const saveInteractions = () => {
-  const serialized: Record<string, any> = {};
-  Object.entries(userInteractionsMap).forEach(([userId, data]) => {
-    serialized[userId] = {
-      ...data,
-      viewedArtworks: Array.from(data.viewedArtworks),
-      dismissedRecommendations: Array.from(data.dismissedRecommendations),
-      hiddenPostIds: Array.from(data.hiddenPostIds),
-      hiddenArtworkIds: Array.from(data.hiddenArtworkIds),
-      hiddenConversationIds: Array.from(data.hiddenConversationIds),
-      deletedConversationIds: Array.from(data.deletedConversationIds),
-      hiddenMessageIds: Array.from(data.hiddenMessageIds),
-      conversationClearedAt: data.conversationClearedAt || {}
-    };
-  });
-  localStorage.setItem('userInteractions', JSON.stringify(serialized));
-};
-
-const loadInteractions = () => {
-    if (isInteractionsLoaded) return;
-    
-    const stored = localStorage.getItem('userInteractions');
-    if (stored) {
-        try {
-            const parsed = JSON.parse(stored);
-            Object.entries(parsed).forEach(([uId, data]: [string, any]) => {
-                userInteractionsMap[uId] = {
-                    ...data,
-                    viewedArtworks: new Set(data.viewedArtworks || []),
-                    dismissedRecommendations: new Set(data.dismissedRecommendations || []),
-                    hiddenPostIds: new Set(data.hiddenPostIds || []),
-                    hiddenArtworkIds: new Set(data.hiddenArtworkIds || []),
-                    hiddenConversationIds: new Set(data.hiddenConversationIds || []),
-                    deletedConversationIds: new Set(data.deletedConversationIds || []),
-                    hiddenMessageIds: new Set(data.hiddenMessageIds || []),
-                    conversationClearedAt: data.conversationClearedAt || {}
-                };
-            });
-        } catch(e) { console.error("Error parsing interactions", e); }
-    }
-    isInteractionsLoaded = true;
-};
-
-
-const getUserInteractions = (userId: string): UserInteractions => {
-  loadInteractions();
-  
-  if (!userInteractionsMap[userId]) {
-    userInteractionsMap[userId] = { 
-      tags: {}, 
-      artistIds: {}, 
-      viewedArtworks: new Set(),
-      dismissedRecommendations: new Set(),
-      hiddenPostIds: new Set(),
-      hiddenArtworkIds: new Set(),
-      hiddenConversationIds: new Set(),
-      deletedConversationIds: new Set(),
-      hiddenMessageIds: new Set(),
-      conversationClearedAt: {}
-    };
-  }
-  return userInteractionsMap[userId];
-};
-
-export const recordInteraction = (userId: string, artworkId: string, type: 'view' | 'linger' | 'save' | 'like') => {
-  const interactions = getUserInteractions(userId);
-  const artwork = artworks.find(a => a.id === artworkId);
-  if (!artwork) return;
-
-  let weight = 1;
-  if (type === 'linger') weight = 3;
-  if (type === 'like') weight = 5;
-  if (type === 'save') weight = 5;
-
-  // Score tags
-  artwork.tags.forEach(tag => {
-    interactions.tags[tag] = (interactions.tags[tag] || 0) + weight;
-  });
-
-  // Score artist
-  interactions.artistIds[artwork.artistId] = (interactions.artistIds[artwork.artistId] || 0) + weight;
-
-  // Mark view
-  if (type === 'view') interactions.viewedArtworks.add(artworkId);
-  
-  saveInteractions();
-};
-
-export const dismissRecommendation = (userId: string, artworkId: string) => {
-  const interactions = getUserInteractions(userId);
-  interactions.dismissedRecommendations.add(artworkId);
-  saveInteractions();
-};
-
-export const toggleHideSocialPost = (userId: string, postId: string) => {
-    const interactions = getUserInteractions(userId);
-    if (interactions.hiddenPostIds.has(postId)) {
-        interactions.hiddenPostIds.delete(postId);
-    } else {
-        interactions.hiddenPostIds.add(postId);
-    }
-    saveInteractions();
-};
-
-export const toggleHideRecommendation = (userId: string, artworkId: string) => {
-    const interactions = getUserInteractions(userId);
-    if (interactions.hiddenArtworkIds.has(artworkId)) {
-        interactions.hiddenArtworkIds.delete(artworkId);
-    } else {
-        interactions.hiddenArtworkIds.add(artworkId);
-    }
-    saveInteractions();
-};
-
-
-const initializeUserDatabase = (): User[] => {
-  if (userDatabase) {
-    return userDatabase;
-  }
-  try {
-    const db = localStorage.getItem('userDatabase');
-    if (db) {
-      userDatabase = JSON.parse(db);
-      return userDatabase!;
-    }
-  } catch (error) {
-    console.error("Failed to parse userDatabase from localStorage, resetting.", error);
-    try { localStorage.removeItem('userDatabase'); } catch(e) { console.error("Failed to remove corrupted userDatabase.", e); }
-  }
-  
-  try {
-    localStorage.setItem('userDatabase', JSON.stringify(initialUsers));
-    userDatabase = initialUsers;
-  } catch (error) {
-    console.error("Failed to set initial userDatabase in localStorage. Using in-memory fallback.", error);
-    userDatabase = initialUsers; // Fallback to in-memory
-  }
-  return userDatabase;
-};
-
-const saveUserDatabase = (db: User[]) => {
-  try {
-    localStorage.setItem('userDatabase', JSON.stringify(db));
-  } catch (error) {
-    console.error("Failed to save userDatabase to localStorage", error);
-  }
-  userDatabase = db;
-};
-
-export const getAllUsers = (): User[] => {
-  return initializeUserDatabase();
-};
-
-export const registerUser = (newUser: Omit<User, 'id'>): User => {
-  const db = initializeUserDatabase();
-  if (db.some(user => user.email.toLowerCase() === newUser.email.toLowerCase())) {
-    throw new Error("An account with this email already exists.");
-  }
-  if (db.some(user => user.username.toLowerCase() === newUser.username.toLowerCase())) {
-    throw new Error("This username is already taken. Please choose another.");
-  }
-  // Initialize followingIds as empty array
-  const user: User = { ...newUser, id: Date.now().toString(), followingIds: [] };
-  const newDb = [...db, user];
-  saveUserDatabase(newDb);
-  return user;
-};
-
-// Mutual connection function (Connect)
-export const toggleFollowUser = (currentUserId: string, targetUserId: string): User => {
-  const db = initializeUserDatabase();
-  
-  // Determine if we are currently connected by checking if currentUser follows targetUser
-  const currentUser = db.find(u => u.id === currentUserId);
-  if (!currentUser) throw new Error("Current user not found");
-  
-  const isConnected = currentUser.followingIds.includes(targetUserId);
-  
-  const newDb = db.map(user => {
-    // Update Current User
-    if (user.id === currentUserId) {
-      const newFollowing = isConnected 
-        ? user.followingIds.filter(id => id !== targetUserId)
-        : [...user.followingIds, targetUserId];
-      
-      return {
-        ...user,
-        followingIds: newFollowing,
-        stats: {
-            ...user.stats,
-            following: newFollowing.length,
-            followers: isConnected ? Math.max(0, user.stats.followers - 1) : user.stats.followers + 1
-        }
-      };
-    }
-
-    // Update Target User (Mutual)
-    if (user.id === targetUserId) {
-       const newFollowing = isConnected 
-        ? user.followingIds.filter(id => id !== currentUserId)
-        : [...user.followingIds, currentUserId];
-
-      return {
-        ...user,
-        followingIds: newFollowing,
-        stats: {
-            ...user.stats,
-            following: newFollowing.length,
-            followers: isConnected ? Math.max(0, user.stats.followers - 1) : user.stats.followers + 1
-        }
-      };
-    }
-    
-    return user;
-  });
-
-  saveUserDatabase(newDb);
-  
-  // Trigger Notification for the Target User only when connecting (not disconnecting)
-  if (!isConnected) {
-    createNotification(targetUserId, 'follow', currentUserId);
-  }
-
-  return newDb.find(u => u.id === currentUserId)!;
-};
-
-export const toggleArtworkLike = (userId: string, artworkId: string): User => {
-    let db = initializeUserDatabase();
-    const newDb = db.map(user => {
-        if (user.id === userId) {
-            const likes = new Set(user.likedArtworkIds);
-            let likedCount = user.stats.liked || 0;
-            
-            if (likes.has(artworkId)) {
-                likes.delete(artworkId);
-                likedCount = Math.max(0, likedCount - 1);
-            } else {
-                likes.add(artworkId);
-                likedCount++;
-                // Record interaction for recommendation engine
-                recordInteraction(userId, artworkId, 'like');
-            }
-            
-            return { 
-                ...user, 
-                likedArtworkIds: Array.from(likes),
-                stats: { ...user.stats, liked: likedCount }
-            };
-        }
-        return user;
-    });
-    saveUserDatabase(newDb);
-    return newDb.find(u => u.id === userId)!;
-};
-
-export const updateUserProfile = (userId: string, updates: Partial<User>): User => {
-    let db = initializeUserDatabase();
-    const newDb = db.map(user => {
-        if (user.id === userId) {
-            return { ...user, ...updates };
-        }
-        return user;
-    });
-    saveUserDatabase(newDb);
-    return newDb.find(u => u.id === userId)!;
-};
-
-export const checkEmailExists = (email: string): boolean => {
-  const db = initializeUserDatabase();
-  return db.some(user => user.email.toLowerCase() === email.toLowerCase());
-};
-
-export const checkUsernameExists = (username: string): boolean => {
-    const db = initializeUserDatabase();
-    return db.some(user => user.username.toLowerCase() === username.toLowerCase());
-};
-
-export const authenticateUser = (email: string, password_provided: string): User | null => {
-  const db = initializeUserDatabase();
-  const user = db.find(user => user.email === email && user.password === password_provided);
-  if (user) {
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword as User;
-  }
-  return null;
-};
-
-export const deleteUser = (userId: string) => {
-    let db = initializeUserDatabase();
-    const newDb = db.filter(user => user.id !== userId);
-    saveUserDatabase(newDb);
-};
-// -- End DB --
-
-// -- Artworks --
-
+// --- AI ARTWORK GENERATION (Client-Side) ---
 const generateArtworks = (): Artwork[] => {
     const generated: Artwork[] = [];
-    const totalImages = 60; // Set to 60 unique images
-
+    const totalImages = 60;
     const styles = [
-        "abstract expressionism vibrant colors",
-        "cyberpunk futuristic city neon",
-        "surreal dreamscape fantasy",
-        "digital 3d geometric shapes",
-        "oil painting textured impasto",
-        "watercolor floral soft pastel",
-        "sci-fi cosmic nebula stars",
-        "pop art retro comic style",
-        "minimalist architectural design",
-        "fantasy character portrait detailed"
+        "abstract expressionism vibrant colors", "cyberpunk futuristic city neon", "surreal dreamscape fantasy",
+        "digital 3d geometric shapes", "oil painting textured impasto", "watercolor floral soft pastel",
+        "sci-fi cosmic nebula stars", "pop art retro comic style", "minimalist architectural design", "fantasy character portrait detailed"
     ];
-
     const adjectives = ["Ethereal", "Vivid", "Lost", "Silent", "Chaos", "Neon", "Future", "Pastel", "Mystic", "Golden"];
     const nouns = ["Dreams", "City", "Horizon", "Echo", "Fragment", "Vision", "Pulse", "Orbit", "Flow", "Cipher"];
 
@@ -618,25 +157,19 @@ const generateArtworks = (): Artwork[] => {
         const prompt = encodeURIComponent(`${style} ${i}`);
         const width = 600;
         const height = 800;
-        
         const titleAdjective = adjectives[i % adjectives.length];
         const titleNoun = nouns[(i + Math.floor(i / 10)) % nouns.length];
 
-        // Use deterministic values instead of Math.random() to avoid randomization on refresh
-        const artistId = ((i % 5) + 1).toString(); 
-        const likes = 50 + (i * 7) % 500;
-        const commentsCount = (i * 3) % 15;
-
         generated.push({
-            id: (i + 1).toString(),
-            artistId: artistId,
+            id: `ai_${i + 1}`,
+            artistId: ((i % 5) + 1).toString(), 
             image: `https://image.pollinations.ai/prompt/${prompt}?width=${width}&height=${height}&nologo=true&seed=${i}`,
             title: `${titleAdjective} ${titleNoun} #${i + 1}`,
-            likes: likes,
-            description: `A unique AI generated artwork exploring the themes of ${style}. Created with generative algorithms.`,
+            likes: 50 + (i * 7) % 500,
+            description: `A unique AI generated artwork exploring the themes of ${style}.`,
             size: 'Digital',
             tags: ["ai-art", "generative", ...style.split(" ").slice(0, 1)],
-            commentsCount: commentsCount
+            commentsCount: (i * 3) % 15
         });
     }
     return generated;
@@ -644,489 +177,675 @@ const generateArtworks = (): Artwork[] => {
 
 export const artworks: Artwork[] = generateArtworks();
 
-export const findUserById = (id: string | undefined): User | undefined => {
+// --- HELPERS: STORAGE ---
+
+const base64ToBlob = async (base64: string): Promise<Blob> => {
+  const res = await fetch(base64);
+  const blob = await res.blob();
+  return blob;
+};
+
+// Uploads image to Supabase Storage and returns Public URL
+// Falls back to returning the base64 string if upload fails (legacy mode)
+const uploadImageToStorage = async (base64Data: string, folder: string): Promise<string> => {
+  try {
+    // If it's already a URL, ignore
+    if (base64Data.startsWith('http')) return base64Data;
+
+    const blob = await base64ToBlob(base64Data);
+    const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(fileName, blob, { contentType: 'image/jpeg' });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('images')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  } catch (error) {
+    console.error("Storage Upload Failed (using Base64 fallback):", error);
+    return base64Data;
+  }
+};
+
+// --- NOTIFICATIONS ---
+
+export const createNotification = async (recipientId: string, type: 'like' | 'comment' | 'follow', actorId: string, contentPreview?: string) => {
+  if (recipientId === actorId) return;
+  
+  await supabase.from('notifications').insert([{
+      user_id: recipientId,
+      type,
+      actor_id: actorId,
+      content_preview: contentPreview,
+      is_read: false
+  }]);
+};
+
+export const getNotificationsForUser = async (userId: string): Promise<Notification[]> => {
+  // Use explicit column join syntax "users!actor_id" to ensure Supabase finds the relationship
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*, actor:users!actor_id(name, avatar_url)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((n: any) => ({
+      id: n.id,
+      userId: n.user_id,
+      type: n.type,
+      actorId: n.actor_id,
+      actorName: n.actor?.name || 'Unknown User',
+      actorAvatar: n.actor?.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
+      contentPreview: n.content_preview,
+      time: new Date(n.created_at).toLocaleDateString(),
+      unread: !n.is_read,
+      timestamp: new Date(n.created_at).getTime()
+  }));
+};
+
+export const getUnreadNotificationCount = async (userId: string): Promise<number> => {
+  const { count } = await supabase
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('is_read', false);
+  return count || 0;
+};
+
+export const markNotificationsAsRead = async (userId: string) => {
+  await supabase.from('notifications').update({ is_read: true }).eq('user_id', userId);
+};
+
+export const clearAllNotifications = async (userId: string) => {
+    await supabase.from('notifications').delete().eq('user_id', userId);
+};
+
+export const deleteNotification = async (id: string) => {
+    await supabase.from('notifications').delete().eq('id', id);
+};
+
+// --- INTERACTIONS (DB Based) ---
+
+interface InteractionData {
+  hiddenPostIds: string[];
+  hiddenArtworkIds: string[];
+  dismissedRecommendationIds: string[];
+  hiddenConversationIds: string[];
+  deletedConversationIds: string[];
+  hiddenMessageIds: string[];
+}
+
+const DEFAULT_PREFS: InteractionData = { 
+  hiddenPostIds: [], hiddenArtworkIds: [], dismissedRecommendationIds: [], 
+  hiddenConversationIds: [], deletedConversationIds: [], hiddenMessageIds: [] 
+};
+
+// Internal helper to update preferences in DB
+const updatePreferences = async (userId: string, newPrefs: InteractionData) => {
+    await supabase.from('users').update({ preferences: newPrefs }).eq('id', userId);
+};
+
+// --- USERS ---
+
+export const findUserById = async (id: string | undefined): Promise<User | undefined> => {
   if (!id) return undefined;
-  const db = initializeUserDatabase();
-  const user = db.find(user => user.id === id);
-  if (user) {
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword as User;
-  }
-  return undefined;
-}
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (error) return undefined;
+  
+  const collections = await findCollectionsByUserId(id);
 
-export const findArtworksByArtistId = (artistId: string | undefined): Artwork[] => {
-  if (!artistId) return [];
-  return artworks.filter(artwork => artwork.artistId === artistId);
-}
-
-export const findCollectionArtworksByUserId = (userId: string | undefined): CollectionArtwork[] => {
-    const user = findUserById(userId);
-    return user?.collections?.flatMap(c => c.artworks) || [];
+  return {
+      ...data,
+      avatar: data.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png", 
+      coverImage: data.cover_image_url,
+      joinDate: new Date(data.created_at).toLocaleDateString(),
+      likedArtworkIds: data.liked_artwork_ids || [],
+      followingIds: data.following_ids || [],
+      collections: collections,
+      stats: data.stats || { followers: 0, following: 0, artworks: 0, collections: collections.length, liked: 0 },
+      preferences: data.preferences || DEFAULT_PREFS
+  };
 };
 
-export const addCollectionArtwork = (userId: string, artwork: CollectionArtwork) => {
-    let db = initializeUserDatabase();
-    const newDb = db.map(user => {
-        if (user.id === userId) {
-             const allCollectionImages = user.collections?.flatMap(c => c.artworks).map(a => a.image) || [];
-             if (allCollectionImages.includes(artwork.image)) {
-                 throw new Error("You have already added this artwork to your collection.");
-             }
-
-            const newCollections = user.collections ? [...user.collections] : [{ id: 'col1', name: 'Main Collection', artworks: [] }];
-            newCollections[0].artworks.unshift(artwork);
-            return { ...user, collections: newCollections };
-        }
-        return user;
-    });
-    saveUserDatabase(newDb);
+export const getAllUsers = async (): Promise<User[]> => {
+  const { data, error } = await supabase.from('users').select('*');
+  if (error) return [];
+  return data.map((u: any) => ({
+      ...u,
+      avatar: u.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
+      coverImage: u.cover_image_url,
+      joinDate: new Date(u.created_at).toLocaleDateString(),
+      likedArtworkIds: u.liked_artwork_ids || [],
+      followingIds: u.following_ids || [],
+      collections: [],
+      stats: u.stats || { followers: 0, following: 0 },
+      preferences: u.preferences || DEFAULT_PREFS
+  }));
 };
 
-export const isDuplicateArtwork = (userId: string, imageBase64: string): boolean => {
-    const user = findUserById(userId);
-    if (!user) return false;
+export const searchUsersAndArtworks = async (query: string) => {
+    const lowerQ = query.toLowerCase();
+    const allUsers = await getAllUsers();
+    const matchedUsers = allUsers.filter(u => 
+        u.name.toLowerCase().includes(lowerQ) || 
+        u.username.toLowerCase().includes(lowerQ)
+    );
+    
+    const { data: dbArtworks } = await supabase.from('artworks').select('*').ilike('title', `%${query}%`);
+    
+    const matchedArtworks = [
+        ...artworks.filter(a => a.title.toLowerCase().includes(lowerQ) || a.tags.some(t => t.includes(lowerQ))),
+        ...(dbArtworks ? dbArtworks.map((a: any) => ({
+            id: a.id,
+            artistId: a.artist_id,
+            image: a.image_url,
+            title: a.title,
+            likes: a.likes_count,
+            description: a.description,
+            tags: a.tags || []
+        })) : [])
+    ];
 
-    if (user.role === 'artist') {
-        const artistWorks = findArtworksByArtistId(userId);
-        return artistWorks.some(work => work.image === imageBase64);
-    } else {
-         const collectionWorks = findCollectionArtworksByUserId(userId);
-         return collectionWorks.some(work => work.image === imageBase64);
-    }
-}
-
-export const deleteUserArtwork = (userId: string, artworkId: string) => {
-    console.log(`Deleted artwork ${artworkId} for user ${userId}`);
+    return { users: matchedUsers, artworks: matchedArtworks };
 };
 
-export const deleteCollectionArtwork = (userId: string, artworkId: string) => {
-    let db = initializeUserDatabase();
-    const newDb = db.map(user => {
-        if (user.id === userId && user.collections) {
-            const newCollections = user.collections.map(collection => ({
-                ...collection,
-                artworks: collection.artworks.filter(art => art.id !== artworkId),
-            }));
-            return { ...user, collections: newCollections };
-        }
-        return user;
-    });
-    saveUserDatabase(newDb);
-};
+export const toggleFollowUser = async (currentUserId: string, targetUserId: string): Promise<User> => {
+  const currentUser = await findUserById(currentUserId);
+  if (!currentUser) throw new Error("User not found");
 
-// --- Social Feed Logic ---
+  const isFollowing = currentUser.followingIds.includes(targetUserId);
+  let newFollowing = [...currentUser.followingIds];
 
-let socialPosts: SocialPost[] = [];
-
-try {
-  const storedPosts = localStorage.getItem('socialPosts');
-  if (storedPosts) {
-    socialPosts = JSON.parse(storedPosts);
+  if (isFollowing) {
+    newFollowing = newFollowing.filter(id => id !== targetUserId);
   } else {
-    socialPosts = [];
-    localStorage.setItem('socialPosts', JSON.stringify(socialPosts));
-  }
-} catch (e) {
-  console.error("Failed to load social posts", e);
-  socialPosts = [];
-}
-
-const saveSocialPosts = () => {
-    localStorage.setItem('socialPosts', JSON.stringify(socialPosts));
-};
-
-// --- MIXED FEED ALGORITHM ---
-
-export const getMixedFeed = (userId: string): FeedItem[] => {
-  const currentUser = findUserById(userId);
-  if (!currentUser) return [];
-
-  const interactions = getUserInteractions(userId);
-
-  // 1. Get Social Posts from Connected Users & Self
-  // Users see posts from people they follow, plus their own posts.
-  const allowedAuthorIds = [...(currentUser.followingIds || []), currentUser.id];
-  
-  const relevantPosts: FeedItem[] = socialPosts
-    .filter(post => allowedAuthorIds.includes(post.authorId))
-    .map(post => ({ 
-        type: 'post', 
-        data: post,
-        isHidden: interactions.hiddenPostIds.has(post.id)
-    }));
-
-  // 2. Get Artwork Recommendations
-  // Based on simple scoring algorithm from UserInteractions
-  
-  // Calculate scores for all artworks
-  const scoredArtworks = artworks.map(art => {
-    let score = 0;
-    let reason = "Recommended for you";
-
-    // Score based on followed artist
-    if (currentUser.followingIds?.includes(art.artistId)) {
-      score += 10;
-      reason = "From an artist you follow";
-    }
-
-    // Score based on tags
-    art.tags.forEach(tag => {
-      if (interactions.tags[tag]) {
-        score += interactions.tags[tag];
-        reason = `Because you like ${tag}`;
-      }
-    });
-
-    // Score based on specific artist affinity
-    if (interactions.artistIds[art.artistId]) {
-      score += interactions.artistIds[art.artistId];
-    }
-
-    // Filter out viewed ones to encourage discovery (optional, simplistic here)
-    // For now, we just deprioritize slightly if viewed
-    if (interactions.viewedArtworks.has(art.id)) {
-      score -= 5;
-    }
-
-    return { art, score, reason };
-  });
-
-  // Filter out dismissed items (Permanently deleted from feed)
-  // We still include HIDDEN items here, but mark them as hidden.
-  const topRecommendations = scoredArtworks
-    .filter(item => item.score > 0 && !interactions.dismissedRecommendations.has(item.art.id))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5) // Take top 5 recommendations
-    .map(item => ({ 
-        type: 'recommendation' as const, 
-        data: item.art, 
-        reason: item.reason,
-        isHidden: interactions.hiddenArtworkIds.has(item.art.id)
-    }));
-
-  // If no recommendations (new user), allow some random popular ones
-  if (topRecommendations.length === 0) {
-     const randomPicks = artworks
-        .filter(art => !interactions.dismissedRecommendations.has(art.id))
-        .slice(0, 3)
-        .map(art => ({
-            type: 'recommendation' as const, 
-            data: art, 
-            reason: "Popular on Regestra",
-            isHidden: interactions.hiddenArtworkIds.has(art.id)
-        }));
-     topRecommendations.push(...randomPicks);
+    newFollowing.push(targetUserId);
   }
 
-  // 3. Interleave / Merge
-  // Simple merge: Add a recommendation every 2 posts
-  const combinedFeed: FeedItem[] = [...relevantPosts];
-  
-  topRecommendations.forEach((rec, index) => {
-    // Insert at specific intervals
-    const position = (index + 1) * 2; 
-    if (position < combinedFeed.length) {
-      combinedFeed.splice(position, 0, rec);
-    } else {
-      combinedFeed.push(rec);
-    }
-  });
+  await supabase.from('users').update({ 
+      following_ids: newFollowing,
+      stats: { ...currentUser.stats, following: newFollowing.length } 
+  }).eq('id', currentUserId);
 
-  return combinedFeed;
-};
-
-// Legacy export kept for compatibility if needed, but UI should move to getMixedFeed
-export const getSocialPosts = (): SocialPost[] => {
-    return [...socialPosts].sort((a, b) => b.timestamp - a.timestamp);
-};
-
-export const createSocialPost = (userId: string, content: string, image?: string): SocialPost => {
-    const newPost: SocialPost = {
-        id: `post_${Date.now()}`,
-        authorId: userId,
-        content,
-        image,
-        timestamp: Date.now(),
-        timestampStr: "Just now",
-        likes: [],
-        comments: []
-    };
-    socialPosts.unshift(newPost);
-    saveSocialPosts();
-    return newPost;
-};
-
-export const deleteSocialPost = (postId: string) => {
-    socialPosts = socialPosts.filter(p => p.id !== postId);
-    saveSocialPosts();
-};
-
-export const toggleLikeSocialPost = (postId: string, userId: string): SocialPost[] => {
-    socialPosts = socialPosts.map(post => {
-        if (post.id === postId) {
-            const likes = new Set(post.likes);
-            let action = 'unlike';
-            if (likes.has(userId)) {
-                likes.delete(userId);
-            } else {
-                likes.add(userId);
-                action = 'like';
-            }
-            // Record interaction
-            recordInteraction(userId, "social_interaction", 'like'); // Generic interaction
-            
-            // Notify author
-            if (action === 'like') {
-               createNotification(post.authorId, 'like', userId, post.content || "your post");
-            }
-
-            return { ...post, likes: Array.from(likes) };
-        }
-        return post;
-    });
-    saveSocialPosts();
-    return getSocialPosts(); // Logic in UI will handle feed refresh
-};
-
-export const addCommentToSocialPost = (postId: string, userId: string, text: string): SocialPost[] => {
-    socialPosts = socialPosts.map(post => {
-        if (post.id === postId) {
-            const newComment: Comment = {
-                id: `cmt_${Date.now()}`,
-                userId,
-                text,
-                timestamp: "Just now"
-            };
-            
-            createNotification(post.authorId, 'comment', userId, text);
-            
-            return { ...post, comments: [...post.comments, newComment] };
-        }
-        return post;
-    });
-    saveSocialPosts();
-    return getSocialPosts();
-};
-
-// --- Messaging Mock Data ---
-let conversations: Conversation[] = [];
-
-try {
-  const storedConvs = localStorage.getItem('conversations');
-  if (storedConvs) {
-    conversations = JSON.parse(storedConvs);
+  if (!isFollowing) {
+      await createNotification(targetUserId, 'follow', currentUserId);
   }
-} catch (e) {
-  console.error("Failed to load conversations", e);
-}
 
-const saveConversations = () => {
-    localStorage.setItem('conversations', JSON.stringify(conversations));
-}
-
-export const getConversationsForUser = (userId: string): Conversation[] => {
-  const interactions = getUserInteractions(userId);
-  const clearedAt = interactions.conversationClearedAt;
-  
-  return conversations
-    .filter(c => c.participants.includes(userId))
-    .filter(c => !interactions.deletedConversationIds.has(c.id)) // Filter out deleted conversations
-    .map(c => {
-        // Check if conversation was cleared. If so, hide messages before that time.
-        const clearTime = clearedAt[c.id] || 0;
-        
-        // If last message is older than clear time, it looks like an empty/new chat
-        let displayLastMessage = c.lastMessage;
-        
-        if (c.lastMessageTimestamp < clearTime) {
-            displayLastMessage = '';
-        }
-
-        // Calculate user-specific unread count
-        const userUnreadCount = c.unreadCounts ? (c.unreadCounts[userId] || 0) : 0;
-        
-        return {
-            ...c,
-            lastMessage: displayLastMessage,
-            unreadCount: userUnreadCount, // Override global count with user-specific count
-            isHidden: interactions.hiddenConversationIds.has(c.id)
-        };
-    })
-    .sort((a, b) => b.lastMessageTimestamp - a.lastMessageTimestamp); // Ensure newest on top
+  return { ...currentUser, followingIds: newFollowing, stats: { ...currentUser.stats, following: newFollowing.length } };
 };
 
-export const getMessagesForConversation = (conversationId: string, userId?: string): Message[] => {
-    const conv = conversations.find(c => c.id === conversationId);
-    if (!conv) return [];
+export const toggleArtworkLike = async (userId: string, artworkId: string): Promise<User> => {
+    const user = await findUserById(userId);
+    if (!user) throw new Error("User not found");
+
+    const likes = new Set(user.likedArtworkIds);
+    if (likes.has(artworkId)) likes.delete(artworkId);
+    else likes.add(artworkId);
+
+    const newLikes = Array.from(likes);
+
+    await supabase.from('users').update({
+        liked_artwork_ids: newLikes,
+        stats: { ...user.stats, liked: newLikes.length }
+    }).eq('id', userId);
+
+    return { ...user, likedArtworkIds: newLikes, stats: { ...user.stats, liked: newLikes.length } };
+};
+
+export const updateUserProfile = async (userId: string, updates: Partial<User>): Promise<User> => {
+    // Upload images to Storage if changed
+    let finalAvatar = updates.avatar;
+    let finalCover = updates.coverImage;
+
+    if (updates.avatar && updates.avatar.startsWith('data:')) {
+        finalAvatar = await uploadImageToStorage(updates.avatar, 'avatars');
+    }
+    if (updates.coverImage && updates.coverImage.startsWith('data:')) {
+        finalCover = await uploadImageToStorage(updates.coverImage, 'covers');
+    }
+
+    const { data, error } = await supabase
+        .from('users')
+        .update({
+            name: updates.name,
+            username: updates.username,
+            bio: updates.bio,
+            location: updates.location,
+            website: updates.website,
+            contact_email: updates.contactEmail,
+            socials: updates.socials,
+            commission_status: updates.commissionStatus,
+            avatar_url: finalAvatar,
+            cover_image_url: finalCover
+        })
+        .eq('id', userId)
+        .select()
+        .single();
+
+    if (error) throw error;
     
+    return await findUserById(userId) as User;
+};
+
+export const deleteUser = async (userId: string) => {
+    await supabase.from('users').delete().eq('id', userId);
+};
+
+// --- SOCIAL POSTS ---
+
+export const getSocialPosts = async (): Promise<SocialPost[]> => {
+  const { data, error } = await supabase
+    .from('social_posts')
+    .select('*, users!author_id(name, avatar_url)')
+    .order('created_at', { ascending: false });
+
+  if (error) return [];
+
+  return data.map((p: any) => ({
+    id: p.id,
+    authorId: p.author_id,
+    content: p.content,
+    image: p.image_url,
+    timestamp: new Date(p.created_at).getTime(),
+    timestampStr: new Date(p.created_at).toLocaleDateString(),
+    likes: p.likes || [],
+    comments: p.comments || [],
+    author: p.users ? {
+        name: p.users.name,
+        avatar: p.users.avatar_url || "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"
+    } : undefined
+  }));
+};
+
+export const createSocialPost = async (userId: string, content: string, image?: string): Promise<SocialPost> => {
+  let imageUrl = image;
+  if (image && image.startsWith('data:')) {
+      imageUrl = await uploadImageToStorage(image, 'posts');
+  }
+
+  const { data, error } = await supabase.from('social_posts').insert([{
+    author_id: userId,
+    content,
+    image_url: imageUrl,
+    likes: [],
+    comments: []
+  }]).select('*, users!author_id(name, avatar_url)').single();
+
+  if (error) throw error;
+  
+  return {
+      id: data.id,
+      authorId: data.author_id,
+      content: data.content,
+      image: data.image_url,
+      timestamp: Date.now(),
+      timestampStr: "Just now",
+      likes: [],
+      comments: [],
+      author: data.users ? {
+        name: data.users.name,
+        avatar: data.users.avatar_url
+      } : undefined
+  };
+};
+
+export const deleteSocialPost = async (postId: string) => {
+    await supabase.from('social_posts').delete().eq('id', postId);
+};
+
+export const toggleLikeSocialPost = async (postId: string, userId: string) => {
+    const { data: post } = await supabase.from('social_posts').select('likes, author_id').eq('id', postId).single();
+    if (!post) return;
+
+    const likes = new Set(post.likes || []);
+    if (likes.has(userId)) {
+        likes.delete(userId);
+    } else {
+        likes.add(userId);
+        await createNotification(post.author_id, 'like', userId);
+    }
+    await supabase.from('social_posts').update({ likes: Array.from(likes) }).eq('id', postId);
+};
+
+export const addCommentToSocialPost = async (postId: string, userId: string, text: string) => {
+     const { data: post } = await supabase.from('social_posts').select('comments, author_id').eq('id', postId).single();
+     if (!post) return;
+
+     const newComment = {
+         id: `cmt_${Date.now()}`,
+         userId,
+         text,
+         timestamp: "Just now"
+     };
+
+     const comments = [...(post.comments || []), newComment];
+     await supabase.from('social_posts').update({ comments }).eq('id', postId);
+
+     await createNotification(post.author_id, 'comment', userId, text);
+};
+
+// --- ARTWORKS ---
+
+export const publishUserArtwork = async (userId: string, artworkData: { title: string; description: string; tags: string; image: string; visibility: string }) => {
+    let imageUrl = artworkData.image;
+    if (artworkData.image.startsWith('data:')) {
+        imageUrl = await uploadImageToStorage(artworkData.image, 'artworks');
+    }
+
+    const { data, error } = await supabase.from('artworks').insert([{
+        artist_id: userId,
+        title: artworkData.title,
+        description: artworkData.description,
+        tags: artworkData.tags.split(',').map(t => t.trim()),
+        image_url: imageUrl,
+        likes_count: 0
+    }]).select();
+
+    if (error) throw error;
+    
+    const user = await findUserById(userId);
+    if (user) {
+       await supabase.from('users').update({
+          stats: { ...user.stats, artworks: (user.stats.artworks || 0) + 1 }
+       }).eq('id', userId);
+    }
+    return data;
+};
+
+export const findArtworksByArtistId = async (id?: string): Promise<Artwork[]> => {
+    if (!id) return [];
+    
+    const { data, error } = await supabase
+        .from('artworks')
+        .select('*')
+        .eq('artist_id', id)
+        .order('created_at', { ascending: false });
+        
+    const realArtworks: Artwork[] = data ? data.map((a: any) => ({
+        id: a.id,
+        artistId: a.artist_id,
+        image: a.image_url,
+        title: a.title,
+        likes: a.likes_count || 0,
+        description: a.description || '',
+        size: 'Digital',
+        tags: a.tags || [],
+        commentsCount: 0
+    })) : [];
+
+    const mockArtworks = artworks.filter(a => a.artistId === id);
+    return [...realArtworks, ...mockArtworks];
+};
+
+export const deleteUserArtwork = async (uid: string, aid: string) => {
+    if (!aid.startsWith('ai_')) { 
+       await supabase.from('artworks').delete().eq('id', aid);
+    }
+};
+
+// --- MESSAGES ---
+
+export const getConversationsForUser = async (userId: string): Promise<Conversation[]> => {
+    const { data, error } = await supabase.from('conversations').select('*');
+    if (error) return [];
+
+    const user = await findUserById(userId);
+    const prefs = user?.preferences || DEFAULT_PREFS;
+    
+    let userConvs = data.filter((c: any) => 
+        c.participants && 
+        c.participants.includes(userId) &&
+        !prefs.deletedConversationIds.includes(c.id)
+    );
+
+    return userConvs.map((c: any) => ({
+        id: c.id,
+        participants: c.participants,
+        messages: [],
+        lastMessage: c.last_message || '',
+        lastMessageTimestamp: new Date(c.updated_at).getTime(),
+        unreadCount: (c.unread_counts && c.unread_counts[userId]) || 0,
+        unreadCounts: c.unread_counts,
+        isHidden: prefs.hiddenConversationIds.includes(c.id)
+    }));
+};
+
+export const getMessagesForConversation = async (conversationId: string, userId?: string): Promise<Message[]> => {
+    const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+    if (error || !data) return [];
+
+    let msgs = data.map((m: any) => ({
+        id: m.id,
+        senderId: m.sender_id,
+        text: m.content,
+        timestamp: m.created_at,
+        timestampRaw: new Date(m.created_at).getTime()
+    }));
+
     if (userId) {
-        const interactions = getUserInteractions(userId);
-        const clearedAt = interactions.conversationClearedAt[conversationId] || 0;
-        
-        return conv.messages
-            .filter(m => m.timestampRaw > clearedAt) // Filter out cleared history
-            .map(m => ({
-                ...m,
-                isHidden: interactions.hiddenMessageIds.has(m.id)
-            }));
+        const user = await findUserById(userId);
+        const prefs = user?.preferences || DEFAULT_PREFS;
+        msgs = msgs.filter((m: Message) => !prefs.hiddenMessageIds.includes(m.id));
     }
-    
-    return conv.messages;
+    return msgs;
 };
 
-export const sendMessage = (conversationId: string, senderId: string, text: string) => {
-    const conv = conversations.find(c => c.id === conversationId);
+export const sendMessage = async (conversationId: string, senderId: string, text: string) => {
+    await supabase.from('messages').insert([{
+        conversation_id: conversationId,
+        sender_id: senderId,
+        content: text
+    }]);
+    
+    const { data: conv } = await supabase.from('conversations').select('unread_counts, participants').eq('id', conversationId).single();
     if (conv) {
-        const now = Date.now();
-        const newMessage: Message = {
-            id: `m${now}`,
-            senderId,
-            text,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            timestampRaw: now
-        };
-        conv.messages.push(newMessage);
-        conv.lastMessage = text;
-        conv.lastMessageTimestamp = now;
-        
-        // Initialize unreadCounts if needed and increment for recipients
-        if (!conv.unreadCounts) conv.unreadCounts = {};
-        conv.participants.forEach(pId => {
-            if (pId !== senderId) {
-                conv.unreadCounts![pId] = (conv.unreadCounts![pId] || 0) + 1;
-            }
+        const newCounts = { ...conv.unread_counts };
+        conv.participants.forEach((pid: string) => {
+            if (pid !== senderId) newCounts[pid] = (newCounts[pid] || 0) + 1;
         });
-
-        saveConversations();
+        
+        await supabase.from('conversations').update({
+            last_message: text,
+            updated_at: new Date(),
+            unread_counts: newCounts
+        }).eq('id', conversationId);
     }
 };
 
-export const markConversationAsRead = (conversationId: string, userId: string) => {
-    const conv = conversations.find(c => c.id === conversationId);
+export const startConversation = async (userId1: string, userId2: string): Promise<string> => {
+    const { data: existing } = await supabase.from('conversations').select('*');
+    const found = existing?.find((c: any) => c.participants.includes(userId1) && c.participants.includes(userId2));
+    
+    if (found) return found.id;
+
+    const { data, error } = await supabase.from('conversations').insert([{
+        participants: [userId1, userId2],
+        last_message: '',
+        unread_counts: {}
+    }]).select().single();
+
+    if (error) throw error;
+    return data.id;
+};
+
+export const markConversationAsRead = async (conversationId: string, userId: string) => {
+    const { data: conv } = await supabase.from('conversations').select('unread_counts').eq('id', conversationId).single();
     if (conv) {
-        if (!conv.unreadCounts) conv.unreadCounts = {};
-        conv.unreadCounts[userId] = 0;
-        saveConversations();
+        const newCounts = { ...conv.unread_counts, [userId]: 0 };
+        await supabase.from('conversations').update({ unread_counts: newCounts }).eq('id', conversationId);
     }
 };
 
-export const startConversation = (userId1: string, userId2: string): string => {
-    let conv = conversations.find(c => c.participants.includes(userId1) && c.participants.includes(userId2));
-    if (!conv) {
-        conv = {
-            id: `conv${Date.now()}`,
-            participants: [userId1, userId2],
-            messages: [],
-            lastMessage: '',
-            lastMessageTimestamp: Date.now(),
-            unreadCount: 0,
-            unreadCounts: {}
-        };
-        conversations.push(conv);
-        saveConversations();
+// --- COLLECTIONS ---
+
+export const findCollectionsByUserId = async (userId: string): Promise<Collection[]> => {
+    const { data: collections, error } = await supabase.from('collections').select('*').eq('user_id', userId);
+    if (error || !collections) return [];
+
+    const result: Collection[] = [];
+    for (const c of collections) {
+        const { data: items } = await supabase.from('collection_items').select('*').eq('collection_id', c.id);
+        result.push({
+            id: c.id,
+            name: c.name,
+            artworks: items ? items.map((i: any) => ({
+                id: i.id,
+                image: i.image_url,
+                title: i.title,
+                artistName: i.artist_name
+            })) : []
+        });
     }
-    // If it was deleted/cleared, we might want to revive it? 
-    // For now, if the user deleted it, it will reappear because we filter based on ID in getConversations.
-    // But we should probably remove it from the deleted set if they start it again.
-    const interactions1 = getUserInteractions(userId1);
-    if (interactions1.deletedConversationIds.has(conv.id)) {
-        interactions1.deletedConversationIds.delete(conv.id);
-        saveInteractions();
-    }
+    return result;
+};
+
+export const findCollectionArtworksByUserId = async (userId?: string): Promise<CollectionArtwork[]> => {
+    if (!userId) return [];
+    const collections = await findCollectionsByUserId(userId);
+    return collections.flatMap(c => c.artworks);
+};
+
+export const addCollectionArtwork = async (userId: string, art: any) => {
+    let { data: collection } = await supabase.from('collections').select('id').eq('user_id', userId).eq('name', 'Favorites').single();
     
-    return conv.id;
-};
-
-export const toggleHideConversation = (userId: string, conversationId: string) => {
-    const interactions = getUserInteractions(userId);
-    if (interactions.hiddenConversationIds.has(conversationId)) {
-        interactions.hiddenConversationIds.delete(conversationId);
-    } else {
-        interactions.hiddenConversationIds.add(conversationId);
+    if (!collection) {
+        const { data: newCol } = await supabase.from('collections').insert([{ user_id: userId, name: 'Favorites' }]).select().single();
+        collection = newCol;
     }
-    saveInteractions();
-};
 
-export const deleteConversationForUser = (userId: string, conversationId: string) => {
-    const interactions = getUserInteractions(userId);
-    
-    // 1. Mark as deleted (hides from list)
-    interactions.deletedConversationIds.add(conversationId);
-    
-    // 2. Set clear timestamp to NOW. This ensures that if they rejoin the chat,
-    // they don't see history prior to this moment.
-    interactions.conversationClearedAt[conversationId] = Date.now();
-    
-    saveInteractions();
-};
-
-export const toggleHideMessage = (userId: string, messageId: string) => {
-    const interactions = getUserInteractions(userId);
-    if (interactions.hiddenMessageIds.has(messageId)) {
-        interactions.hiddenMessageIds.delete(messageId);
-    } else {
-        interactions.hiddenMessageIds.add(messageId);
+    if (collection) {
+        await supabase.from('collection_items').insert([{
+            collection_id: collection.id,
+            image_url: art.image,
+            title: art.title,
+            artist_name: art.artistName || art.artist?.name || 'Unknown'
+        }]);
     }
-    saveInteractions();
 };
 
-export const deleteMessage = (conversationId: string, messageId: string) => {
-    const conv = conversations.find(c => c.id === conversationId);
-    if (conv) {
-        conv.messages = conv.messages.filter(m => m.id !== messageId);
-        // Update last message if needed
-        if (conv.messages.length > 0) {
-            const lastMsg = conv.messages[conv.messages.length - 1];
-            conv.lastMessage = lastMsg.text;
-            conv.lastMessageTimestamp = lastMsg.timestampRaw;
+export const deleteCollectionArtwork = async (userId: string, aid: string) => {
+    await supabase.from('collection_items').delete().eq('id', aid);
+};
+
+
+// --- FEED ALGORITHM ---
+
+export const getMixedFeed = async (userId: string): Promise<FeedItem[]> => {
+    const posts = await getSocialPosts();
+    const user = await findUserById(userId);
+    const prefs = user?.preferences || DEFAULT_PREFS;
+    
+    const feedPosts: FeedItem[] = posts
+        .filter(p => !prefs.hiddenPostIds.includes(p.id))
+        .map(p => ({ type: 'post', data: p, isHidden: false }));
+
+    const recs: FeedItem[] = artworks
+        .slice(0, 5)
+        .filter(a => !prefs.dismissedRecommendationIds.includes(a.id))
+        .map(art => ({ 
+            type: 'recommendation', 
+            data: art, 
+            reason: "Trending on Regestra",
+            isHidden: prefs.hiddenArtworkIds.includes(art.id)
+        }));
+
+    const combined: FeedItem[] = [...feedPosts];
+    recs.forEach((rec, i) => {
+        if (combined.length > (i + 1) * 2) {
+             combined.splice((i + 1) * 2, 0, rec);
         } else {
-            conv.lastMessage = '';
-            conv.lastMessageTimestamp = Date.now();
+            combined.push(rec);
         }
-        saveConversations();
-    }
+    });
+    return combined;
 };
 
-// --- Analytics Engine ---
+// --- PREFERENCE UPDATERS ---
+
+export const recordInteraction = (userId: string, artworkId: string, type: string) => {
+    console.log(`Interaction: User ${userId} ${type} on ${artworkId}`);
+};
+
+export const dismissRecommendation = async (userId: string, artworkId: string) => {
+    const user = await findUserById(userId);
+    if (!user) return;
+    const prefs = user.preferences;
+    prefs.dismissedRecommendationIds.push(artworkId);
+    await updatePreferences(userId, prefs);
+};
+
+export const toggleHideSocialPost = async (userId: string, postId: string): Promise<User | undefined> => {
+    const user = await findUserById(userId);
+    if (!user) return;
+    const prefs = user.preferences;
+    if (prefs.hiddenPostIds.includes(postId)) prefs.hiddenPostIds = prefs.hiddenPostIds.filter(id => id !== postId);
+    else prefs.hiddenPostIds.push(postId);
+    await updatePreferences(userId, prefs);
+    return { ...user, preferences: prefs };
+};
+
+export const toggleHideRecommendation = async (userId: string, artworkId: string) => {
+    const user = await findUserById(userId);
+    if (!user) return;
+    const prefs = user.preferences;
+    if (prefs.hiddenArtworkIds.includes(artworkId)) prefs.hiddenArtworkIds = prefs.hiddenArtworkIds.filter(id => id !== artworkId);
+    else prefs.hiddenArtworkIds.push(artworkId);
+    await updatePreferences(userId, prefs);
+};
+
+export const toggleHideConversation = async (userId: string, convId: string) => {
+    const user = await findUserById(userId);
+    if (!user) return;
+    const prefs = user.preferences;
+    if (prefs.hiddenConversationIds.includes(convId)) prefs.hiddenConversationIds = prefs.hiddenConversationIds.filter(id => id !== convId);
+    else prefs.hiddenConversationIds.push(convId);
+    await updatePreferences(userId, prefs);
+};
+
+export const deleteConversationForUser = async (userId: string, convId: string) => {
+    const user = await findUserById(userId);
+    if (!user) return;
+    const prefs = user.preferences;
+    if (!prefs.deletedConversationIds.includes(convId)) {
+        prefs.deletedConversationIds.push(convId);
+    }
+    await updatePreferences(userId, prefs);
+};
+
+export const toggleHideMessage = async (userId: string, msgId: string) => {
+    const user = await findUserById(userId);
+    if (!user) return;
+    const prefs = user.preferences;
+    if (prefs.hiddenMessageIds.includes(msgId)) prefs.hiddenMessageIds = prefs.hiddenMessageIds.filter(id => id !== msgId);
+    else prefs.hiddenMessageIds.push(msgId);
+    await updatePreferences(userId, prefs);
+};
+
+export const deleteMessage = async (convId: string, msgId: string) => {
+    await supabase.from('messages').delete().eq('id', msgId);
+};
 
 export const getSystemAnalytics = (): SystemAnalytics => {
-    const allUsers = getAllUsers();
-    const totalUsers = allUsers.length;
-    const posts = getSocialPosts();
-
-    // 1. Calculate Content Metrics
-    const totalPosts = posts.length;
-    let totalComments = 0;
-    let totalLikes = 0;
-
-    posts.forEach(p => {
-        totalComments += p.comments.length;
-        totalLikes += p.likes.length;
-    });
-
-    // 2. Calculate Per User Metrics
-    // Avoid division by zero
-    const postsPerUser = totalUsers > 0 ? parseFloat((totalPosts / totalUsers).toFixed(2)) : 0;
-    const commentsPerUser = totalUsers > 0 ? parseFloat((totalComments / totalUsers).toFixed(2)) : 0;
-    const likesPerUser = totalUsers > 0 ? parseFloat((totalLikes / totalUsers).toFixed(2)) : 0;
-
-    // 3. Simulate Session Metrics (Since no historical tracking exists)
-    // These generate realistic-looking data for the demo based on "active" status
-    const baseSessionFreq = 3.5; // avg sessions/day
-    const baseSessionDur = 12; // mins
-    const baseDailyTime = 45; // mins
-
     return {
-        avgSessionFrequency: baseSessionFreq, 
-        avgSessionDuration: baseSessionDur,
-        dailyTimeSpent: baseDailyTime,
-        postsPerActiveUser: postsPerUser,
-        commentsPerActiveUser: commentsPerUser,
-        likesPerActiveUser: likesPerUser,
-        totalPosts,
-        totalComments,
-        totalLikes,
-        activeUsers: totalUsers
+        avgSessionFrequency: 3.5, avgSessionDuration: 12, dailyTimeSpent: 45,
+        postsPerActiveUser: 1.2, commentsPerActiveUser: 3.4, likesPerActiveUser: 15,
+        totalPosts: 120, totalComments: 450, totalLikes: 1200, activeUsers: 85
     };
 };

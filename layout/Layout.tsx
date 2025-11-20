@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { createUrl } from "../utils";
@@ -17,7 +16,6 @@ export default function Layout() {
   const isLoggedIn = !!currentUser;
   const isLanding = location.pathname === '/';
   const isAuthPage = ['/login', '/sign-up', '/forgot-password', '/admin'].includes(location.pathname);
-  const isHomePage = location.pathname === '/home';
   
   // Initialize to false so new users don't see a red dot by default
   const [showNotifications, setShowNotifications] = useState(false);
@@ -26,15 +24,19 @@ export default function Layout() {
   
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Search State
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (currentUser) {
-      const unreadCount = getUnreadNotificationCount(currentUser.id);
-      setHasUnread(unreadCount > 0);
+      getUnreadNotificationCount(currentUser.id).then(count => {
+        setHasUnread(count > 0);
+      });
     } else {
       setHasUnread(false);
     }
-  }, [currentUser, location.pathname]); // Re-check on navigation as well
+  }, [currentUser, location.pathname]); 
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -51,7 +53,6 @@ export default function Layout() {
   
   const handleBellClick = () => {
     setShowNotifications(prev => !prev);
-    // Optimistically clear unread indicator when opening
     if (!showNotifications && hasUnread) {
       setHasUnread(false);
     }
@@ -61,6 +62,13 @@ export default function Layout() {
     setCurrentUser(null);
     setShowProfileDropdown(false);
     navigate('/');
+  };
+
+  const handleSearch = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery("");
+    }
   };
 
   const Logo = () => (
@@ -99,6 +107,9 @@ export default function Layout() {
                       <Input
                         placeholder="Search artists, artworks..."
                         className="pl-10 bg-gray-50 border-0 rounded-full"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={handleSearch}
                       />
                     </div>
                     <nav className="flex items-center gap-1">

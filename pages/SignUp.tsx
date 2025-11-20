@@ -1,22 +1,19 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Mail, Lock, Palette, Heart, User as UserIcon, ArrowLeft, LoaderCircle, AlertTriangle, Camera, Sparkles } from 'lucide-react';
-import { useUser } from '../context/UserContext';
-import { registerUser, User } from '../data/mock';
+import { supabase } from '../lib/supabase';
 import { useImageEnhancer } from '../hooks/useImageEnhancer';
 
 type Role = 'artist' | 'artLover';
 
-// Static default image to ensure no identity is "assigned" automatically
 const DEFAULT_AVATAR_URL = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
 
 export default function SignUp() {
   const navigate = useNavigate();
-  const { setCurrentUser } = useUser();
   const [step, setStep] = useState(1);
   const [role, setRole] = useState<Role | null>(null);
   const [email, setEmail] = useState('');
@@ -42,12 +39,10 @@ export default function SignUp() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Allow all image types
       if (!file.type.startsWith('image/')) {
          setError("Please upload a valid image file.");
          return;
       }
-      
       const reader = new FileReader();
       reader.onload = (event) => {
         if (typeof event.target?.result === 'string') {
@@ -58,63 +53,47 @@ export default function SignUp() {
     }
   };
   
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Profile picture is OPTIONAL. We only require role, name, and username here.
     if (role && fullName && username) {
       setIsSigningUp(true);
       setError(null);
       
-      setTimeout(() => {
-        let newUser: Omit<User, 'id'>;
-
-        // Use enhanced image if uploaded, otherwise use static default
-        // This ensures we do not 'generate' a random avatar, but use a neutral placeholder if user skips upload.
-        const finalAvatar = (enhancedImage as string) || DEFAULT_AVATAR_URL;
-
-        const baseUser = {
+      try {
+        // 1. Sign up with Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
+        });
+
+        if (authError) throw authError;
+        if (!authData.user) throw new Error("No user returned from sign up");
+
+        // 2. Insert extra details into 'users' table
+        const finalAvatar = (enhancedImage as string) || DEFAULT_AVATAR_URL;
+
+        const { error: dbError } = await supabase.from('users').insert([{
+          id: authData.user.id, // Important: Match the Auth ID
+          email,
           role,
           name: fullName,
           username,
-          avatar: finalAvatar,
+          avatar_url: finalAvatar, 
           bio: "",
-          joinDate: new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }),
-          likedArtworkIds: [],
-          followingIds: [],
-          stats: { 
-            following: 0,
-            followers: 0,
-          },
-        };
+          stats: { following: 0, followers: 0, artworks: 0, collections: 0, liked: 0 }
+        }]);
 
-        if (role === 'artist') {
-          newUser = {
-            ...baseUser,
-            stats: { ...baseUser.stats, artworks: 0 },
-          };
-        } else { // artLover
-          newUser = {
-            ...baseUser,
-            stats: { ...baseUser.stats, collections: 1, liked: 0 },
-            collections: [{ id: 'col1', name: 'Main Collection', artworks: [] }],
-          };
+        if (dbError) {
+          // Critical: If DB insert fails, sign out immediately to prevent a "zombie" session
+          await supabase.auth.signOut();
+          throw dbError;
         }
 
-        try {
-          const registeredUser = registerUser(newUser);
-          
-          // Simulate sending notification to admin
-          console.log(`[Admin Notification] Sending email to contact@regestra.com: New user signed up with email: ${registeredUser.email}`);
-          
-          setCurrentUser(registeredUser);
-          navigate('/home-social');
-        } catch (err: any) {
-          setError(err.message);
-          setIsSigningUp(false);
-        }
-      }, 1000);
+        navigate('/home-social');
+      } catch (err: any) {
+        setError(err.message || "Registration failed. Please try again.");
+        setIsSigningUp(false);
+      }
     }
   };
 
@@ -128,17 +107,9 @@ export default function SignUp() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <img 
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/user_691b6257d4173f2ed6ec3e95/7495ad18b_RegestraLogo.png" 
-            alt="Regestra" 
-            className="h-10 mx-auto mb-4"
-          />
           <h1 className="text-3xl font-bold text-gray-900">
             {step === 1 ? "Create your Account" : "Tell us about yourself"}
           </h1>
-          <p className="text-gray-600 mt-2">
-            {step === 1 ? "Join our community of artists and art enthusiasts." : `You're signing up as an ${role === 'artist' ? 'Artist' : 'Art Lover'}.`}
-          </p>
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
@@ -176,7 +147,6 @@ export default function SignUp() {
                 </div>
               )}
               
-              {/* Profile Image Upload */}
               <div className="flex justify-center mb-6">
                 <div className="relative">
                     <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border-4 border-white shadow-md">
@@ -187,22 +157,11 @@ export default function SignUp() {
                         ) : (
                             <UserIcon className="w-10 h-10 text-gray-300" />
                         )}
-                        {enhancedImage && !isEnhancing && (
-                             <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                <Camera className="w-6 h-6 text-white" />
-                             </div>
-                        )}
                     </div>
-                    {enhancedImage && (
-                         <div className="absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white flex items-center gap-0.5 shadow-sm">
-                            <Sparkles className="w-2 h-2" /> AI
-                        </div>
-                    )}
                     <button 
                         type="button" 
                         onClick={() => document.getElementById('signup-avatar-upload')?.click()} 
                         className="absolute bottom-0 right-0 bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 transition-colors shadow-lg border-2 border-white"
-                        aria-label="Upload profile picture"
                     >
                         <Camera className="w-4 h-4" />
                     </button>
@@ -215,12 +174,10 @@ export default function SignUp() {
                     />
                 </div>
               </div>
-              <p className="text-center text-sm text-gray-500 -mt-4 mb-4">Profile Picture (Optional)</p>
-              {enhancementError && <p className="text-center text-xs text-red-500">{enhancementError}</p>}
 
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
-                <div className="relative"><UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input id="fullName" type="text" placeholder="Your full name" required className="pl-10 h-12 rounded-xl" value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
+                <Input id="fullName" type="text" placeholder="Your full name" required className="pl-4 h-12 rounded-xl" value={fullName} onChange={(e) => setFullName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
@@ -235,11 +192,6 @@ export default function SignUp() {
             </form>
           )}
         </div>
-        
-        <p className="text-center text-sm text-gray-600 mt-8">
-          Already have an account?{' '}
-          <Link to="/login" className="text-purple-600 hover:underline font-medium">Log In</Link>
-        </p>
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import Layout from './layout/Layout';
@@ -15,6 +14,7 @@ import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import ForgotPassword from './pages/ForgotPassword';
 import Admin from './pages/Admin';
+import Search from './pages/Search';
 import { UserProvider } from './context/UserContext';
 
 export default function App() {
@@ -36,6 +36,7 @@ export default function App() {
             <Route path="sign-up" element={<SignUp />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="admin" element={<Admin />} />
+            <Route path="search" element={<Search />} />
           </Route>
         </Routes>
       </UserProvider>

@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Heart, MessageCircle, Image as ImageIcon, Send, X, LoaderCircle, Trash2, Sparkles, UserPlus, Eye, EyeOff, MoreVertical } from "lucide-react";
@@ -14,8 +11,6 @@ import {
   getMixedFeed,
   FeedItem,
   createSocialPost, 
-  toggleLikeSocialPost, 
-  addCommentToSocialPost,
   findUserById,
   Artwork,
   recordInteraction,
@@ -38,7 +33,11 @@ const RecommendedArtworkCard: React.FC<{
   isMenuOpen: boolean;
   onToggleMenu: (e: React.MouseEvent) => void;
 }> = ({ artwork, reason, isHidden, onView, onDelete, onHide, isMenuOpen, onToggleMenu }) => {
-  const artist = findUserById(artwork.artistId);
+  const [artist, setArtist] = useState<any>(null);
+
+  useEffect(() => {
+     findUserById(artwork.artistId).then(setArtist);
+  }, [artwork.artistId]);
 
   return (
     <div className={`bg-white rounded-2xl shadow-sm overflow-hidden animate-fade-in border border-purple-100 ${isHidden ? 'opacity-60 grayscale bg-gray-50' : ''}`}>
@@ -129,16 +128,11 @@ export default function HomeSocial() {
   const [showHiddenContent, setShowHiddenContent] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   
-  // Create Post State
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostImage, setNewPostImage] = useState<string | null>(null);
   const { isEnhancing, enhancedImage, enhanceImage, resetEnhancement } = useImageEnhancer();
-
-  // Comment State
-  const [commentText, setCommentText] = useState<{[key: string]: string}>({});
-  
-  // Modal State for Recommended Artworks
   const [selectedArtwork, setSelectedArtwork] = useState<Artwork | null>(null);
+  const [selectedArtworkArtist, setSelectedArtworkArtist] = useState<any>(null);
 
   useEffect(() => {
     const handleClickOutside = () => setActiveMenuId(null);
@@ -150,18 +144,24 @@ export default function HomeSocial() {
     if (currentUser) {
       loadFeed();
     }
-  }, [currentUser, showHiddenContent]); // Reload if user or toggle changes
+  }, [currentUser, showHiddenContent]);
 
-  // Sync enhanced image from hook to local state for preview
   useEffect(() => {
     if (enhancedImage) {
       setNewPostImage(enhancedImage);
     }
   }, [enhancedImage]);
 
-  const loadFeed = () => {
+  useEffect(() => {
+      if (selectedArtwork) {
+          findUserById(selectedArtwork.artistId).then(setSelectedArtworkArtist);
+      }
+  }, [selectedArtwork]);
+
+  const loadFeed = async () => {
     if (currentUser) {
-      setFeedItems(getMixedFeed(currentUser.id));
+      const items = await getMixedFeed(currentUser.id);
+      setFeedItems(items);
     }
   };
 
@@ -170,7 +170,6 @@ export default function HomeSocial() {
       const reader = new FileReader();
       reader.onload = (evt) => {
         if (typeof evt.target?.result === 'string') {
-          // Use the enhancer to process the image (or just use raw if preferred, keeping consistent with app)
           enhanceImage(evt.target.result);
         }
       };
@@ -178,90 +177,61 @@ export default function HomeSocial() {
     }
   };
 
-  const handleRemoveImage = () => {
-    setNewPostImage(null);
-    resetEnhancement();
-  };
-
-  const handleCreatePost = () => {
+  const handleCreatePost = async () => {
     if (!currentUser) return;
     if (!newPostContent.trim() && !newPostImage) return;
 
-    createSocialPost(currentUser.id, newPostContent, newPostImage || undefined);
+    await createSocialPost(currentUser.id, newPostContent, newPostImage || undefined);
     
-    // Reset form
     setNewPostContent("");
     setNewPostImage(null);
     resetEnhancement();
-    
-    // Refresh feed
     loadFeed();
   };
 
-  const handleDeletePost = (postId: string) => {
+  const handleDeletePost = async (postId: string) => {
     if (confirm("Are you sure you want to delete this post?")) {
-        deleteSocialPost(postId);
+        await deleteSocialPost(postId);
         loadFeed();
     }
     setActiveMenuId(null);
   };
 
-  const handleHidePost = (postId: string) => {
+  const handleHidePost = async (postId: string) => {
       if (currentUser) {
-          toggleHideSocialPost(currentUser.id, postId);
+          const updatedUser = await toggleHideSocialPost(currentUser.id, postId);
+          if (updatedUser) setCurrentUser(updatedUser);
           loadFeed();
       }
       setActiveMenuId(null);
   }
 
-  const handleHideRecommendation = (artworkId: string) => {
+  const handleHideRecommendation = async (artworkId: string) => {
       if (currentUser) {
-          toggleHideRecommendation(currentUser.id, artworkId);
+          await toggleHideRecommendation(currentUser.id, artworkId);
           loadFeed();
       }
       setActiveMenuId(null);
   }
 
-  const handleDismissRecommendation = (artworkId: string) => {
+  const handleDismissRecommendation = async (artworkId: string) => {
       if (currentUser) {
-          dismissRecommendation(currentUser.id, artworkId);
+          await dismissRecommendation(currentUser.id, artworkId);
           loadFeed();
       }
       setActiveMenuId(null);
   };
 
-  const handleLike = (postId: string) => {
-    if (!currentUser) return;
-    toggleLikeSocialPost(postId, currentUser.id);
-    // Force refresh to show updated state
-    loadFeed(); 
-  };
-
-  const handleArtworkLike = (artworkId: string) => {
+  const handleArtworkLike = async (artworkId: string) => {
       if (!currentUser) return;
-      const updatedUser = toggleArtworkLike(currentUser.id, artworkId);
+      const updatedUser = await toggleArtworkLike(currentUser.id, artworkId);
       setCurrentUser(updatedUser);
   }
-
-  const handleCommentChange = (postId: string, text: string) => {
-    setCommentText(prev => ({ ...prev, [postId]: text }));
-  };
-
-  const handleSubmitComment = (postId: string) => {
-    if (!currentUser) return;
-    const text = commentText[postId];
-    if (!text?.trim()) return;
-
-    addCommentToSocialPost(postId, currentUser.id, text);
-    loadFeed();
-    setCommentText(prev => ({ ...prev, [postId]: "" }));
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* Create Post Card */}
         {currentUser ? (
           <div className="bg-white rounded-2xl shadow-sm p-4 mb-6">
             <div className="flex gap-4">
@@ -277,54 +247,19 @@ export default function HomeSocial() {
                   onChange={(e) => setNewPostContent(e.target.value)}
                   className="border-none bg-gray-50 resize-none focus:ring-0 min-h-[80px] text-lg mb-2"
                 />
-                
-                {isEnhancing && (
-                  <div className="flex items-center gap-2 text-purple-600 text-sm p-2">
-                    <LoaderCircle className="w-4 h-4 animate-spin" />
-                    <span>Processing image...</span>
-                  </div>
-                )}
-
+                {isEnhancing && <div className="flex items-center gap-2 text-purple-600 text-sm p-2"><LoaderCircle className="w-4 h-4 animate-spin" /><span>Processing image...</span></div>}
                 {newPostImage && !isEnhancing && (
                   <div className="relative mb-4 rounded-xl overflow-hidden border border-gray-100">
                     <img src={newPostImage} alt="Preview" className="w-full max-h-64 object-cover" />
-                    <button 
-                      onClick={handleRemoveImage}
-                      className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    <button onClick={() => { setNewPostImage(null); resetEnhancement(); }} className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full"><X className="w-4 h-4" /></button>
                   </div>
                 )}
-
                 <div className="flex items-center justify-between border-t border-gray-100 pt-3">
                   <div className="flex items-center gap-2">
-                    <input 
-                      type="file" 
-                      id="post-image" 
-                      className="hidden" 
-                      accept="image/*" 
-                      onChange={handleImageUpload}
-                      disabled={isEnhancing}
-                    />
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-gray-500 hover:text-purple-600"
-                      onClick={() => document.getElementById('post-image')?.click()}
-                      disabled={isEnhancing}
-                    >
-                      <ImageIcon className="w-5 h-5 mr-2" />
-                      Add Image
-                    </Button>
+                    <input type="file" id="post-image" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={isEnhancing} />
+                    <Button variant="ghost" size="sm" className="text-gray-500 hover:text-purple-600" onClick={() => document.getElementById('post-image')?.click()} disabled={isEnhancing}><ImageIcon className="w-5 h-5 mr-2" /> Add Image</Button>
                   </div>
-                  <Button 
-                    onClick={handleCreatePost} 
-                    disabled={(!newPostContent.trim() && !newPostImage) || isEnhancing}
-                    className="rounded-full px-6"
-                  >
-                    Post
-                  </Button>
+                  <Button onClick={handleCreatePost} disabled={(!newPostContent.trim() && !newPostImage) || isEnhancing} className="rounded-full px-6">Post</Button>
                 </div>
               </div>
             </div>
@@ -340,199 +275,44 @@ export default function HomeSocial() {
           </div>
         )}
         
-        {/* Feed Controls */}
         {currentUser && (
             <div className="flex justify-end mb-4">
-                <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className={`text-xs gap-2 rounded-full ${showHiddenContent ? 'bg-purple-100 text-purple-700' : 'text-gray-500'}`}
-                    onClick={() => setShowHiddenContent(prev => !prev)}
-                >
+                <Button variant="ghost" size="sm" className={`text-xs gap-2 rounded-full ${showHiddenContent ? 'bg-purple-100 text-purple-700' : 'text-gray-500'}`} onClick={() => setShowHiddenContent(prev => !prev)}>
                     {showHiddenContent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     {showHiddenContent ? 'Hide Hidden Content' : 'Show Hidden Content'}
                 </Button>
             </div>
         )}
 
-        {/* Feed */}
         <div className="space-y-6">
-          {feedItems.length === 0 && (
-            <div className="text-center text-gray-500 py-12">
-              <p>No posts yet. Connect with artists or share something to get started!</p>
-            </div>
-          )}
-
           {feedItems.map((item, index) => {
-            // Hide items if toggle is off
             if (!showHiddenContent && item.isHidden) return null;
 
-            // RENDER RECOMMENDATION
             if (item.type === 'recommendation') {
-              const menuId = `rec-${item.data.id}`;
-              return (
-                <RecommendedArtworkCard 
-                  key={`${menuId}-${index}`}
+              return <RecommendedArtworkCard 
+                  key={`rec-${item.data.id}-${index}`}
                   artwork={item.data}
-                  reason={item.reason}
+                  reason={item.reason || ''}
                   isHidden={item.isHidden}
-                  onView={(art) => {
-                    // Record view immediately
-                    if(currentUser) recordInteraction(currentUser.id, art.id, 'view');
-                    setSelectedArtwork(art);
-                  }}
+                  onView={(art) => { if(currentUser) recordInteraction(currentUser.id, art.id, 'view'); setSelectedArtwork(art); }}
                   onDelete={() => handleDismissRecommendation(item.data.id)}
                   onHide={() => handleHideRecommendation(item.data.id)}
-                  isMenuOpen={activeMenuId === menuId}
-                  onToggleMenu={(e) => {
-                      e.stopPropagation();
-                      setActiveMenuId(activeMenuId === menuId ? null : menuId);
-                  }}
-                />
-              );
+                  isMenuOpen={activeMenuId === `rec-${item.data.id}`}
+                  onToggleMenu={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === `rec-${item.data.id}` ? null : `rec-${item.data.id}`); }}
+                />;
             }
 
-            // RENDER SOCIAL POST
-            const post = item.data;
-            const author = findUserById(post.authorId);
-            if (!author) return null;
-            
-            const isLiked = currentUser ? post.likes.includes(currentUser.id) : false;
-            const isAuthor = currentUser?.id === post.authorId;
-            const menuId = `post-${post.id}`;
-
-            return (
-              <div key={post.id} className={`bg-white rounded-2xl shadow-sm overflow-hidden animate-fade-in ${item.isHidden ? 'opacity-60 grayscale bg-gray-50' : ''}`}>
-                {/* Header */}
-                <div className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <Link to={createUrl('/profile/:userId', { userId: author.id })}>
-                      <img src={author.avatar} alt={author.name} className="w-10 h-10 rounded-full object-cover" />
-                    </Link>
-                    <div>
-                      <div className="flex items-center gap-2">
-                          <Link to={createUrl('/profile/:userId', { userId: author.id })}>
-                            <p className="font-semibold text-gray-900 hover:underline">{author.name}</p>
-                          </Link>
-                          {item.isHidden && <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Hidden</span>}
-                      </div>
-                      <p className="text-xs text-gray-500">{post.timestampStr}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="relative">
-                      <button 
-                          onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveMenuId(activeMenuId === menuId ? null : menuId);
-                          }}
-                          className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
-                          aria-label="More options"
-                      >
-                          <MoreVertical className="w-5 h-5" />
-                      </button>
-                      
-                      {activeMenuId === menuId && (
-                          <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-10 animate-in fade-in zoom-in-95 duration-100">
-                               <button
-                                  onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleHidePost(post.id);
-                                  }}
-                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                              >
-                                  {item.isHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                                  {item.isHidden ? "Unhide Post" : "Hide Post"}
-                              </button>
-
-                              {isAuthor && (
-                                  <button
-                                      onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeletePost(post.id);
-                                      }}
-                                      className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                  >
-                                      <Trash2 className="w-4 h-4" />
-                                      Delete Post
-                                  </button>
-                              )}
-                          </div>
-                      )}
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="px-4 pb-2">
-                  {post.content && (
-                    <p className="text-gray-800 whitespace-pre-wrap mb-4 text-base leading-relaxed">{post.content}</p>
-                  )}
-                </div>
-
-                {post.image && (
-                  <div className="w-full bg-gray-100">
-                    <img src={post.image} alt="Post content" className="w-full object-cover max-h-[500px]" />
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="p-4">
-                  <div className="flex items-center gap-6 mb-4">
-                    <button 
-                      onClick={() => handleLike(post.id)}
-                      className={`flex items-center gap-2 transition-colors ${isLiked ? 'text-red-500' : 'text-gray-500 hover:text-gray-900'}`}
-                    >
-                      <Heart className={`w-6 h-6 ${isLiked ? 'fill-current' : ''}`} />
-                      <span className="font-medium">{post.likes.length}</span>
-                    </button>
-                    <button className="flex items-center gap-2 text-gray-500 hover:text-gray-900">
-                      <MessageCircle className="w-6 h-6" />
-                      <span className="font-medium">{post.comments.length}</span>
-                    </button>
-                  </div>
-
-                  {/* Comments Section */}
-                  <div className="space-y-4 pt-2 border-t border-gray-100">
-                    {post.comments.map(comment => {
-                      const commentAuthor = findUserById(comment.userId);
-                      if (!commentAuthor) return null;
-                      return (
-                        <div key={comment.id} className="flex gap-3">
-                          <img src={commentAuthor.avatar} alt={commentAuthor.name} className="w-8 h-8 rounded-full flex-shrink-0 object-cover" />
-                          <div className="bg-gray-50 rounded-2xl px-4 py-2 flex-1">
-                            <p className="font-semibold text-sm">{commentAuthor.name}</p>
-                            <p className="text-sm text-gray-700">{comment.text}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Add Comment */}
-                    {currentUser && (
-                      <div className="flex items-center gap-3 mt-4">
-                        <img src={currentUser.avatar} alt={currentUser.name} className="w-8 h-8 rounded-full flex-shrink-0 object-cover" />
-                        <div className="flex-1 relative">
-                          <Input 
-                            placeholder="Write a comment..." 
-                            className="pr-10 rounded-full"
-                            value={commentText[post.id] || ""}
-                            onChange={(e) => handleCommentChange(post.id, e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleSubmitComment(post.id)}
-                          />
-                          <button 
-                            onClick={() => handleSubmitComment(post.id)}
-                            disabled={!commentText[post.id]?.trim()}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-purple-600 disabled:opacity-50 hover:text-purple-700"
-                          >
-                            <Send className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
+            const post = item.data as SocialPost;
+            return <SocialPostItem 
+              key={post.id} 
+              post={post} 
+              currentUser={currentUser} 
+              isHidden={item.isHidden}
+              isMenuOpen={activeMenuId === `post-${post.id}`}
+              onToggleMenu={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === `post-${post.id}` ? null : `post-${post.id}`); }}
+              onHide={() => handleHidePost(post.id)}
+              onDelete={() => handleDeletePost(post.id)}
+            />;
           })}
         </div>
       </div>
@@ -540,7 +320,7 @@ export default function HomeSocial() {
       {selectedArtwork && (
         <ArtworkDetailModal 
           artwork={selectedArtwork}
-          artist={findUserById(selectedArtwork.artistId)}
+          artist={selectedArtworkArtist}
           onClose={() => setSelectedArtwork(null)}
           isLiked={currentUser?.likedArtworkIds?.includes(selectedArtwork.id) || false}
           onToggleLike={() => handleArtworkLike(selectedArtwork.id)} 
@@ -549,3 +329,61 @@ export default function HomeSocial() {
     </div>
   );
 }
+
+// Helper component for individual posts
+const SocialPostItem = ({ post, currentUser, isHidden, isMenuOpen, onToggleMenu, onHide, onDelete }: any) => {
+    // Author details are now included in the post object, but we handle potential missing data
+    const author = post.author;
+
+    if (!author) return null;
+
+    const isLiked = currentUser ? post.likes.includes(currentUser.id) : false;
+    const isAuthor = currentUser?.id === post.authorId;
+
+    return (
+        <div className={`bg-white rounded-2xl shadow-sm overflow-hidden animate-fade-in ${isHidden ? 'opacity-60 grayscale bg-gray-50' : ''}`}>
+            <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                <Link to={createUrl('/profile/:userId', { userId: post.authorId })}>
+                    <img src={author.avatar} alt={author.name} className="w-10 h-10 rounded-full object-cover" />
+                </Link>
+                <div>
+                    <div className="flex items-center gap-2">
+                        <Link to={createUrl('/profile/:userId', { userId: post.authorId })}>
+                        <p className="font-semibold text-gray-900 hover:underline">{author.name}</p>
+                        </Link>
+                        {isHidden && <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Hidden</span>}
+                    </div>
+                    <p className="text-xs text-gray-500">{post.timestampStr}</p>
+                </div>
+                </div>
+                <div className="relative">
+                    <button onClick={onToggleMenu} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"><MoreVertical className="w-5 h-5" /></button>
+                    {isMenuOpen && (
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-10 animate-in fade-in zoom-in-95 duration-100">
+                            <button onClick={(e) => { e.stopPropagation(); onHide(); }} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                {isHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                {isHidden ? "Unhide Post" : "Hide Post"}
+                            </button>
+                            {isAuthor && (
+                                <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <Trash2 className="w-4 h-4" /> Delete Post
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+            <div className="px-4 pb-2">
+                {post.content && <p className="text-gray-800 whitespace-pre-wrap mb-4 text-base leading-relaxed">{post.content}</p>}
+            </div>
+            {post.image && <div className="w-full bg-gray-100"><img src={post.image} alt="Post" className="w-full object-cover max-h-[500px]" /></div>}
+            <div className="p-4">
+                 <div className="flex items-center gap-6">
+                    <button className={`flex items-center gap-2 ${isLiked ? 'text-red-500' : 'text-gray-500'}`}><Heart className={`w-6 h-6 ${isLiked ? 'fill-current' : ''}`} /> <span>{post.likes.length}</span></button>
+                    <button className="flex items-center gap-2 text-gray-500"><MessageCircle className="w-6 h-6" /> <span>{post.comments.length}</span></button>
+                 </div>
+            </div>
+        </div>
+    );
+};
