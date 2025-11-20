@@ -152,7 +152,7 @@ export default function Landing() {
             Ready to Share Your Art?
           </h2>
           <p className="text-xl text-purple-100 mb-10">
-            Join thousands of artists who trust Regestra to showcase their creative work
+            Join thousands of artists and art lovers who trust Regestra to showcase their creative work
           </p>
           <Link to="/sign-up">
             <Button size="xl" variant="primary-light" className="rounded-full font-semibold shadow-xl">

@@ -1,10 +1,12 @@
 
+
+
 import React, { useState, useEffect } from 'react';
-import { getAllUsers, User } from '../data/mock';
+import { getAllUsers, User, getSystemAnalytics, SystemAnalytics } from '../data/mock';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
-import { Shield, Lock, LogOut, Search, Mail, User as UserIcon, AlertTriangle, Settings, CheckCircle, ArrowLeft, Save } from 'lucide-react';
+import { Shield, Lock, LogOut, Search, Mail, User as UserIcon, AlertTriangle, Settings, CheckCircle, ArrowLeft, Save, Activity, Clock, BarChart, MessageSquare, ThumbsUp, FileText } from 'lucide-react';
 
 export default function Admin() {
   // --- Admin State Management ---
@@ -24,9 +26,10 @@ export default function Admin() {
   const [successMsg, setSuccessMsg] = useState('');
 
   // Dashboard State
-  const [activeTab, setActiveTab] = useState<'users' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'analytics' | 'settings'>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [analytics, setAnalytics] = useState<SystemAnalytics | null>(null);
 
   // Settings Inputs
   const [settingsEmail, setSettingsEmail] = useState(adminEmail);
@@ -38,6 +41,13 @@ export default function Admin() {
     localStorage.setItem('admin_email', adminEmail);
     localStorage.setItem('admin_password', adminPass);
   }, [adminEmail, adminPass]);
+
+  // Load Analytics on Tab Change
+  useEffect(() => {
+      if (isAuthenticated && activeTab === 'analytics') {
+          setAnalytics(getSystemAnalytics());
+      }
+  }, [isAuthenticated, activeTab]);
 
   // --- Handlers ---
 
@@ -302,18 +312,26 @@ export default function Admin() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Navigation Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-gray-200">
+        <div className="flex gap-4 mb-8 border-b border-gray-200 overflow-x-auto">
           <button 
             onClick={() => setActiveTab('users')}
-            className={`pb-4 px-2 font-medium text-sm flex items-center gap-2 transition-colors relative ${activeTab === 'users' ? 'text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`pb-4 px-4 font-medium text-sm flex items-center gap-2 transition-colors relative whitespace-nowrap ${activeTab === 'users' ? 'text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             <UserIcon className="w-4 h-4" />
             Users Database
             {activeTab === 'users' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 rounded-t-full"></span>}
           </button>
           <button 
+            onClick={() => setActiveTab('analytics')}
+            className={`pb-4 px-4 font-medium text-sm flex items-center gap-2 transition-colors relative whitespace-nowrap ${activeTab === 'analytics' ? 'text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <BarChart className="w-4 h-4" />
+            Analytics
+            {activeTab === 'analytics' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 rounded-t-full"></span>}
+          </button>
+          <button 
             onClick={() => setActiveTab('settings')}
-            className={`pb-4 px-2 font-medium text-sm flex items-center gap-2 transition-colors relative ${activeTab === 'settings' ? 'text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`pb-4 px-4 font-medium text-sm flex items-center gap-2 transition-colors relative whitespace-nowrap ${activeTab === 'settings' ? 'text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             <Settings className="w-4 h-4" />
             Admin Settings
@@ -321,7 +339,7 @@ export default function Admin() {
           </button>
         </div>
 
-        {activeTab === 'users' ? (
+        {activeTab === 'users' && (
           <div className="animate-fade-in">
             <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -411,7 +429,88 @@ export default function Admin() {
               </div>
             </div>
           </div>
-        ) : (
+        )}
+
+        {activeTab === 'analytics' && analytics && (
+           <div className="animate-fade-in">
+               <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-900">Platform Analytics</h2>
+                <p className="text-gray-600">Real-time tracking of user engagement and session activity.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Session Cards */}
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                      <div className="flex items-center justify-between mb-4">
+                          <div className="bg-blue-100 p-3 rounded-xl">
+                              <Activity className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">+5.2% this week</span>
+                      </div>
+                      <h3 className="text-gray-500 text-sm font-medium">Avg Session Frequency</h3>
+                      <p className="text-3xl font-bold text-gray-900 mt-1">{analytics.avgSessionFrequency} <span className="text-sm font-normal text-gray-400">sessions/day</span></p>
+                  </div>
+
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                      <div className="flex items-center justify-between mb-4">
+                          <div className="bg-indigo-100 p-3 rounded-xl">
+                              <Clock className="w-6 h-6 text-indigo-600" />
+                          </div>
+                          <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">+12% this week</span>
+                      </div>
+                      <h3 className="text-gray-500 text-sm font-medium">Avg Session Duration</h3>
+                      <p className="text-3xl font-bold text-gray-900 mt-1">{analytics.avgSessionDuration} <span className="text-sm font-normal text-gray-400">min</span></p>
+                  </div>
+
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                      <div className="flex items-center justify-between mb-4">
+                          <div className="bg-purple-100 p-3 rounded-xl">
+                              <Clock className="w-6 h-6 text-purple-600" />
+                          </div>
+                          <span className="text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-full">Stable</span>
+                      </div>
+                      <h3 className="text-gray-500 text-sm font-medium">Daily Time Spent Per User</h3>
+                      <p className="text-3xl font-bold text-gray-900 mt-1">{analytics.dailyTimeSpent} <span className="text-sm font-normal text-gray-400">min</span></p>
+                  </div>
+
+                  {/* Engagement Cards */}
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                      <div className="flex items-center justify-between mb-4">
+                          <div className="bg-orange-100 p-3 rounded-xl">
+                              <FileText className="w-6 h-6 text-orange-600" />
+                          </div>
+                          <span className="text-xs font-medium text-gray-500">Total: {analytics.totalPosts}</span>
+                      </div>
+                      <h3 className="text-gray-500 text-sm font-medium">Posts Per Active User</h3>
+                      <p className="text-3xl font-bold text-gray-900 mt-1">{analytics.postsPerActiveUser}</p>
+                  </div>
+
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                      <div className="flex items-center justify-between mb-4">
+                          <div className="bg-pink-100 p-3 rounded-xl">
+                              <MessageSquare className="w-6 h-6 text-pink-600" />
+                          </div>
+                          <span className="text-xs font-medium text-gray-500">Total: {analytics.totalComments}</span>
+                      </div>
+                      <h3 className="text-gray-500 text-sm font-medium">Comments Per Active User</h3>
+                      <p className="text-3xl font-bold text-gray-900 mt-1">{analytics.commentsPerActiveUser}</p>
+                  </div>
+
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                      <div className="flex items-center justify-between mb-4">
+                          <div className="bg-red-100 p-3 rounded-xl">
+                              <ThumbsUp className="w-6 h-6 text-red-600" />
+                          </div>
+                          <span className="text-xs font-medium text-gray-500">Total: {analytics.totalLikes}</span>
+                      </div>
+                      <h3 className="text-gray-500 text-sm font-medium">Likes Per Active User</h3>
+                      <p className="text-3xl font-bold text-gray-900 mt-1">{analytics.likesPerActiveUser}</p>
+                  </div>
+              </div>
+           </div>
+        )}
+
+        {activeTab === 'settings' && (
           <div className="max-w-2xl mx-auto animate-fade-in">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
               <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
