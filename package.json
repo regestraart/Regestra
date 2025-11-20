@@ -14,8 +14,7 @@
     "react-dom": "^19.2.0",
     "@radix-ui/react-label": "^2.1.8",
     "react-router-dom": "^7.9.6",
-    "@google/genai": "^1.29.1",
-    "@supabase/supabase-js": "2.45.4"
+    "@google/genai": "^1.29.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

@@ -5,41 +5,43 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Mail, Lock, LoaderCircle, AlertTriangle, Shield } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useUser } from '../context/UserContext';
+import { authenticateUser } from '../data/mock';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { setCurrentUser } = useUser();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-      
-      // UserContext will pick up the auth state change automatically
-      navigate('/home-social');
-    } catch (err: any) {
-      setError(err.message || 'Invalid email or password.');
-    } finally {
-      setIsLoading(false);
-    }
+    setTimeout(() => {
+      const user = authenticateUser(email, password);
+      if (user) {
+        setCurrentUser(user);
+        navigate('/home-social');
+      } else {
+        setError('Invalid email or password. Please try again.');
+        setIsLoading(false);
+      }
+    }, 1000);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
+          <img 
+            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/user_691b6257d4173f2ed6ec3e95/7495ad18b_RegestraLogo.png" 
+            alt="Regestra" 
+            className="h-10 mx-auto mb-4"
+          />
           <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
           <p className="text-gray-600 mt-2">Log in to continue to Regestra.</p>
         </div>

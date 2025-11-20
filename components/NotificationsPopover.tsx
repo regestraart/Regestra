@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, UserPlus, X, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -25,23 +26,23 @@ const NotificationsPopover = ({ onClose }: { onClose: () => void }) => {
 
   useEffect(() => {
     if (currentUser) {
-      // Load notifications asynchronously
-      getNotificationsForUser(currentUser.id).then(items => {
-        setNotifications(items);
-        // Mark as read when opening the popover
-        markNotificationsAsRead(currentUser.id);
-      });
+      // Load notifications
+      const items = getNotificationsForUser(currentUser.id);
+      setNotifications(items);
+      
+      // Mark as read when opening the popover
+      markNotificationsAsRead(currentUser.id);
     }
   }, [currentUser]);
 
-  const handleDelete = async (id: string) => {
-    await deleteNotification(id);
+  const handleDelete = (id: string) => {
+    deleteNotification(id);
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  const handleClearAll = async () => {
+  const handleClearAll = () => {
     if (currentUser) {
-      await clearAllNotifications(currentUser.id);
+      clearAllNotifications(currentUser.id);
       setNotifications([]);
     }
   };

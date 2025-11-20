@@ -21,17 +21,14 @@ export const useImageEnhancer = () => {
     setEnhancementError(null);
 
     try {
-      // Safe environment variable access for Vite
-      const apiKey = (import.meta as any).env?.VITE_GOOGLE_API_KEY || (typeof process !== 'undefined' ? process.env.API_KEY : undefined);
-
       // If no API key is configured, skip enhancement and use original
-      if (!apiKey) {
+      if (!process.env.API_KEY) {
         console.warn("API key is not configured. Using original image.");
         setEnhancedImage(originalImageBase64);
         return;
       }
       
-      const ai = new GoogleGenAI({ apiKey: apiKey });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const { mimeType, data } = extractBase64(originalImageBase64);
 
       const imagePart = {

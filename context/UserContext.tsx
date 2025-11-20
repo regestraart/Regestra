@@ -1,7 +1,6 @@
 
 import React, { createContext, useState, useContext, PropsWithChildren, useEffect } from 'react';
 import { User, findUserById } from '../data/mock';
-import { supabase } from '../lib/supabase';
 
 interface UserContextType {
   currentUser: User | null;
@@ -11,47 +10,39 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: PropsWithChildren) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, _setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check active session
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const user = await findUserById(session.user.id);
-        if (user) setCurrentUser(user);
+    try {
+      const storedUserId = localStorage.getItem('currentUser');
+      if (storedUserId) {
+        const user = findUserById(storedUserId);
+        _setCurrentUser(user || null);
       }
-      setIsLoading(false);
-    };
-
-    checkSession();
-
-    // Listen for auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const user = await findUserById(session.user.id);
-        if (user) setCurrentUser(user);
-      } else if (event === 'SIGNED_OUT') {
-        setCurrentUser(null);
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    } catch (error) {
+      console.error("Failed to load user session from localStorage", error);
+      _setCurrentUser(null);
+      localStorage.removeItem('currentUser');
+    }
+    setIsLoading(false);
   }, []);
 
-  // We wrap setCurrentUser to also handle Supabase signOut if setting null
-  const handleSetUser = async (user: User | null) => {
-    if (!user) {
-      await supabase.auth.signOut();
+  const setCurrentUser = (user: User | null) => {
+    _setCurrentUser(user);
+    if (user) {
+      localStorage.setItem('currentUser', user.id);
+    } else {
+      localStorage.removeItem('currentUser');
     }
-    setCurrentUser(user);
   };
+  
+  if (isLoading) {
+    return null; // Or a loading spinner for the whole app
+  }
 
   return (
-    <UserContext.Provider value={{ currentUser, setCurrentUser: handleSetUser }}>
+    <UserContext.Provider value={{ currentUser, setCurrentUser }}>
       {children}
     </UserContext.Provider>
   );
