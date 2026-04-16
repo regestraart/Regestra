@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { useUser } from '../context/UserContext';
 import Logo from '../components/Logo';
 import { Button } from '../components/ui/Button';
+import { SearchComponent } from '../components/Search';
 
 const P = '#7c3aed';
 const T = '#0d9488';
@@ -93,21 +94,24 @@ export default function VerifyCertificate() {
             <div className="flex items-center justify-between h-16">
               <Link to="/"><Logo className="h-7 w-auto" /></Link>
               {currentUser ? (
-                <nav className="flex items-center gap-1">
-                  <Link to="/marketplace"><Button variant="ghost" size="icon" className="rounded-full"><ShoppingBag className="w-5 h-5" /></Button></Link>
-                  <Link to="/verify"><Button variant="ghost" size="icon" className="rounded-full" title="Verify Certificate"><Award className="w-5 h-5 text-purple-600" /></Button></Link>
-                  <Link to="/upload"><Button variant="ghost" size="icon" className="rounded-full"><Upload className="w-5 h-5" /></Button></Link>
-                  <Link to="/messages"><Button variant="ghost" size="icon" className="rounded-full"><MessageCircle className="w-5 h-5" /></Button></Link>
-                  <Button variant="ghost" size="icon" className="rounded-full"><Bell className="w-5 h-5" /></Button>
-                  {currentUser?.is_admin && (
-                    <Link to="/admin"><Button variant="ghost" size="icon" className="rounded-full" title="Admin Dashboard"><Shield className="w-5 h-5 text-purple-600" /></Button></Link>
-                  )}
-                  <Link to={`/profile/${currentUser.username}`}>
-                    <Button variant="ghost" size="icon" className="rounded-full">
-                      <img src={currentUser.avatar} alt="profile" className="w-8 h-8 rounded-full object-cover" />
-                    </Button>
-                  </Link>
-                </nav>
+                <div className="flex items-center gap-6">
+                  <div className="w-96 hidden md:block desktop-search-bar"><SearchComponent /></div>
+                  <nav className="flex items-center gap-1 mobile-nav-icons">
+                    <Link to="/marketplace"><Button variant="ghost" size="icon" className="rounded-full"><ShoppingBag className="w-5 h-5" /></Button></Link>
+                    <Link to="/verify"><Button variant="ghost" size="icon" className="rounded-full" title="Verify Certificate"><Award className="w-5 h-5 text-purple-600" /></Button></Link>
+                    <Link to="/upload"><Button variant="ghost" size="icon" className="rounded-full"><Upload className="w-5 h-5" /></Button></Link>
+                    <Link to="/messages"><Button variant="ghost" size="icon" className="rounded-full"><MessageCircle className="w-5 h-5" /></Button></Link>
+                    <Button variant="ghost" size="icon" className="rounded-full"><Bell className="w-5 h-5" /></Button>
+                    {currentUser?.is_admin && (
+                      <Link to="/admin"><Button variant="ghost" size="icon" className="rounded-full" title="Admin Dashboard"><Shield className="w-5 h-5 text-purple-600" /></Button></Link>
+                    )}
+                    <Link to={`/profile/${currentUser.username}`}>
+                      <Button variant="ghost" size="icon" className="rounded-full">
+                        <img src={currentUser.avatar} alt="profile" className="w-8 h-8 rounded-full object-cover" />
+                      </Button>
+                    </Link>
+                  </nav>
+                </div>
               ) : (
                 <nav className="flex items-center gap-5">
                   <Link to="/login" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Log In</Link>

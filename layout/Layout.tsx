@@ -13,6 +13,7 @@ import { SearchComponent } from "../components/Search";
 import AuthCallback from "../pages/AuthCallback";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import Footer from "../components/Footer";
+import MobileNavFooter from "../components/MobileNavFooter";
 
 export default function Layout() {
   const location = useLocation();
@@ -93,7 +94,7 @@ export default function Layout() {
           style={{ borderBottom: "1px solid rgba(0,0,0,0.06)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-16">
               <Link to="/"><Logo className="h-7 w-auto" /></Link>
 
               {isLoading && !currentUser ? (
@@ -102,18 +103,60 @@ export default function Layout() {
                 </div>
               ) : currentUser ? (
                 /* ── Authenticated nav ── */
-                <div className="flex items-center gap-6">
-                  <div className="w-96 hidden md:block desktop-search-bar"><SearchComponent /></div>
-                  <nav className="flex items-center gap-1 mobile-nav-icons">
-                    <Link to="/marketplace"><Button variant="ghost" size="icon" className="rounded-full"><ShoppingBag className="w-5 h-5" /></Button></Link>
-                    <Link to="/verify"><Button variant="ghost" size="icon" className="rounded-full" title="Verify Certificate"><Award className="w-5 h-5" /></Button></Link>
-                    <Link to="/upload"><Button variant="ghost" size="icon" className="rounded-full"><Upload className="w-5 h-5" /></Button></Link>
-                    <Link to="/messages" onClick={handleMarkMessagesRead}>
-                      <Button variant="ghost" size="icon" className="relative rounded-full">
-                        <MessageCircle className="w-5 h-5" />
-                        {hasUnreadMessages && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />}
-                      </Button>
-                    </Link>
+                <>
+                  {/* ── DESKTOP / TABLET layout (md+): logo | search | icons ── */}
+                  <div className="hidden md:flex items-center gap-6">
+                    <div className="w-96 desktop-search-bar"><SearchComponent /></div>
+                    <nav className="flex items-center gap-1">
+                      <Link to="/marketplace"><Button variant="ghost" size="icon" className="rounded-full"><ShoppingBag className="w-5 h-5" /></Button></Link>
+                      <Link to="/verify"><Button variant="ghost" size="icon" className="rounded-full" title="Verify Certificate"><Award className="w-5 h-5" /></Button></Link>
+                      <Link to="/upload"><Button variant="ghost" size="icon" className="rounded-full"><Upload className="w-5 h-5" /></Button></Link>
+                      <Link to="/messages" onClick={handleMarkMessagesRead}>
+                        <Button variant="ghost" size="icon" className="relative rounded-full">
+                          <MessageCircle className="w-5 h-5" />
+                          {hasUnreadMessages && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />}
+                        </Button>
+                      </Link>
+                      {/* Bell */}
+                      <div className="relative" ref={notificationsRef}>
+                        <Button variant="ghost" size="icon" className="relative rounded-full" onClick={() => setShowNotifications(p => !p)}>
+                          <Bell className="w-5 h-5" />
+                          {hasUnread && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse" />}
+                        </Button>
+                        {showNotifications && <NotificationsPopover onClose={() => setShowNotifications(false)} onNotificationsRead={checkAllUnreadStatus} />}
+                      </div>
+                      {currentUser?.is_admin && (
+                        <Link to="/admin">
+                          <Button variant="ghost" size="icon" className="rounded-full" title="Admin Dashboard">
+                            <Shield className="w-5 h-5 text-purple-600" />
+                          </Button>
+                        </Link>
+                      )}
+                      {/* Profile avatar — desktop/tablet only */}
+                      <div className="relative" ref={profileDropdownRef}>
+                        <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShowProfileDropdown(p => !p)}>
+                          <img src={currentUser.avatar} alt="profile" className="w-8 h-8 rounded-full object-cover" />
+                        </Button>
+                        {showProfileDropdown && (
+                          <ProfileDropdown
+                            user={currentUser}
+                            onSignOut={handleSignOut}
+                            onNavigate={() => setShowProfileDropdown(false)}
+                            onChangePasswordClick={() => { setShowProfileDropdown(false); setShowChangePasswordModal(true); }}
+                          />
+                        )}
+                      </div>
+                    </nav>
+                  </div>
+
+                  {/* ── MOBILE layout: centered search + bell on right ── */}
+                  <div className="flex md:hidden flex-1 items-center justify-center px-3">
+                    <div style={{ flex: 1, maxWidth: 260 }}>
+                      <SearchComponent />
+                    </div>
+                  </div>
+                  <div className="flex md:hidden items-center">
+                    {/* Bell — mobile only right slot */}
                     <div className="relative" ref={notificationsRef}>
                       <Button variant="ghost" size="icon" className="relative rounded-full" onClick={() => setShowNotifications(p => !p)}>
                         <Bell className="w-5 h-5" />
@@ -128,21 +171,8 @@ export default function Layout() {
                         </Button>
                       </Link>
                     )}
-                    <div className="relative" ref={profileDropdownRef}>
-                      <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShowProfileDropdown(p => !p)}>
-                        <img src={currentUser.avatar} alt="profile" className="w-8 h-8 rounded-full object-cover" />
-                      </Button>
-                      {showProfileDropdown && (
-                        <ProfileDropdown
-                          user={currentUser}
-                          onSignOut={handleSignOut}
-                          onNavigate={() => setShowProfileDropdown(false)}
-                          onChangePasswordClick={() => { setShowProfileDropdown(false); setShowChangePasswordModal(true); }}
-                        />
-                      )}
-                    </div>
-                  </nav>
-                </div>
+                  </div>
+                </>
               ) : (
                 /* ── Public nav: context-aware per route ── */
                 <nav className="flex items-center gap-5">
@@ -175,6 +205,14 @@ export default function Layout() {
       <main>{shouldIntercept ? <AuthCallback /> : <Outlet />}</main>
 
       {!isAuthPage && !currentUser && <Footer />}
+      {!isAuthPage && currentUser && (
+        <MobileNavFooter
+          hasUnreadMessages={hasUnreadMessages}
+          onMessagesClick={handleMarkMessagesRead}
+          onChangePasswordClick={() => setShowChangePasswordModal(true)}
+          onSignOut={handleSignOut}
+        />
+      )}
 
       {showChangePasswordModal && <ChangePasswordModal onClose={() => setShowChangePasswordModal(false)} />}
       <SupabaseDebug />

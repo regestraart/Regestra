@@ -332,8 +332,6 @@ SELECT 'Repair V14 Applied! Now use the "Project Reload" button in the app.' as 
 
   return (
     <div className="max-w-xl mx-auto py-8 px-4">
-        <div className="md:hidden mb-6"><SearchComponent /></div>
-
         {/* Create Post Section */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6 transition-all">
           <div className="flex gap-4">
