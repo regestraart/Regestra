@@ -400,14 +400,30 @@
 
 /* ══ Mobile Nav ══════════════════════════════════════════════════════════════ */
 
-/* Hide desktop search on mobile */
+/* Mobile header: search takes flex-1, bell sits on right */
 @media (max-width: 768px) {
   .desktop-search-bar { display: none !important; }
-  .mobile-nav-icons { gap: 2px !important; }
-  .mobile-nav-icons > a > button,
-  .mobile-nav-icons > button,
-  .mobile-nav-icons > div > button {
-    padding: 6px !important;
+}
+
+/* ══ Mobile Bottom Nav Footer ════════════════════════════════════════════════ */
+
+/* Show footer only on mobile */
+@media (max-width: 768px) {
+  .mobile-nav-footer {
+    display: block !important;
+  }
+  .mobile-nav-footer-spacer {
+    height: calc(62px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Hide spacer on desktop/tablet */
+@media (min-width: 769px) {
+  .mobile-nav-footer {
+    display: none !important;
+  }
+  .mobile-nav-footer-spacer {
+    display: none;
   }
 }
 
