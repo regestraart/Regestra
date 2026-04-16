@@ -373,8 +373,6 @@ SELECT 'Fix Applied! Now REFRESH your browser tab.' as status;`.trim();
 
   return (
     <div className="max-w-xl mx-auto py-8 px-4">
-        <div className="md:hidden mb-6"><SearchComponent /></div>
-
         {/* Feed tabs */}
         <div style={{ display:'flex', background:'#f3f0ff', borderRadius:14, padding:4, gap:4, marginBottom:20 }}>
           {([['feed','Your Feed'],['recommended','Recommended']] as const).map(([tab, label]) => (
