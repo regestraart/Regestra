@@ -413,7 +413,7 @@
     display: block !important;
   }
   .mobile-nav-footer-spacer {
-    height: calc(62px + env(safe-area-inset-bottom, 0px));
+    height: calc(70px + env(safe-area-inset-bottom, 0px));
   }
 }
 

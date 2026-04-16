@@ -170,7 +170,7 @@ export default function MobileNavFooter({
         }}>
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-around",
-            height: 62, padding: "0 4px",
+            height: 70, padding: "0 4px",
           }}>
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
@@ -189,14 +189,14 @@ export default function MobileNavFooter({
                     }}
                   >
                     <div style={{
-                      width: 48, height: 48, borderRadius: 16,
+                      width: 54, height: 54, borderRadius: 18,
                       background: `linear-gradient(135deg, ${P}, ${T})`,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       boxShadow: `0 4px 16px ${P}40`,
                     }}>
-                      <Icon size={20} color="#fff" strokeWidth={2.2} />
+                      <Icon size={24} color="#fff" strokeWidth={2.4} />
                     </div>
-                    <span style={{ fontSize: "0.6rem", fontWeight: 700, color: P, letterSpacing: "0.02em" }}>
+                    <span style={{ fontSize: "0.68rem", fontWeight: 800, color: P, letterSpacing: "0.02em" }}>
                       {item.label}
                     </span>
                   </Link>
@@ -216,11 +216,11 @@ export default function MobileNavFooter({
                 >
                   <div style={{ position: "relative" }}>
                     <div style={{
-                      width: 40, height: 40, borderRadius: 12,
+                      width: 44, height: 44, borderRadius: 14,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       background: isActive ? `${P}12` : "transparent",
                     }}>
-                      <Icon size={20} color={isActive ? P : "#9ca3af"} strokeWidth={isActive ? 2.4 : 1.8} />
+                      <Icon size={24} color={isActive ? P : "#9ca3af"} strokeWidth={isActive ? 2.6 : 2} />
                     </div>
                     {showUnread && (
                       <span style={{
@@ -230,7 +230,7 @@ export default function MobileNavFooter({
                     )}
                   </div>
                   <span style={{
-                    fontSize: "0.6rem", fontWeight: isActive ? 700 : 500,
+                    fontSize: "0.68rem", fontWeight: isActive ? 800 : 600,
                     color: isActive ? P : "#9ca3af", letterSpacing: "0.02em",
                   }}>
                     {item.label}
@@ -254,7 +254,7 @@ export default function MobileNavFooter({
               onClick={() => setDropUpOpen(p => !p)}
             >
               <div style={{
-                width: 40, height: 40, borderRadius: 12,
+                width: 44, height: 44, borderRadius: 14,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 background: dropUpOpen ? `${P}12` : "transparent",
               }}>
@@ -263,16 +263,16 @@ export default function MobileNavFooter({
                     src={currentUser.avatar}
                     alt="profile"
                     style={{
-                      width: 28, height: 28, borderRadius: "50%", objectFit: "cover",
+                      width: 32, height: 32, borderRadius: "50%", objectFit: "cover",
                       border: dropUpOpen ? `2px solid ${P}` : "2px solid transparent",
                     }}
                   />
                 ) : (
-                  <User size={20} color="#9ca3af" strokeWidth={1.8} />
+                  <User size={24} color="#9ca3af" strokeWidth={2} />
                 )}
               </div>
               <span style={{
-                fontSize: "0.6rem", fontWeight: dropUpOpen ? 700 : 500,
+                fontSize: "0.68rem", fontWeight: dropUpOpen ? 800 : 600,
                 color: dropUpOpen ? P : "#9ca3af", letterSpacing: "0.02em",
               }}>
                 Profile
