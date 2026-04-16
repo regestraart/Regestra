@@ -159,7 +159,7 @@ export default function Layout() {
                     {/* Bell — mobile only right slot */}
                     <div className="relative" ref={notificationsRef}>
                       <Button variant="ghost" size="icon" className="relative rounded-full" onClick={() => setShowNotifications(p => !p)}>
-                        <Bell className="w-5 h-5" />
+                        <Bell className="w-6 h-6" />
                         {hasUnread && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse" />}
                       </Button>
                       {showNotifications && <NotificationsPopover onClose={() => setShowNotifications(false)} onNotificationsRead={checkAllUnreadStatus} />}

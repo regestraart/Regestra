@@ -94,24 +94,38 @@ export default function VerifyCertificate() {
             <div className="flex items-center justify-between h-16">
               <Link to="/"><Logo className="h-7 w-auto" /></Link>
               {currentUser ? (
-                <div className="flex items-center gap-6">
-                  <div className="w-96 hidden md:block desktop-search-bar"><SearchComponent /></div>
-                  <nav className="flex items-center gap-1 mobile-nav-icons">
-                    <Link to="/marketplace"><Button variant="ghost" size="icon" className="rounded-full"><ShoppingBag className="w-5 h-5" /></Button></Link>
-                    <Link to="/verify"><Button variant="ghost" size="icon" className="rounded-full" title="Verify Certificate"><Award className="w-5 h-5 text-purple-600" /></Button></Link>
-                    <Link to="/upload"><Button variant="ghost" size="icon" className="rounded-full"><Upload className="w-5 h-5" /></Button></Link>
-                    <Link to="/messages"><Button variant="ghost" size="icon" className="rounded-full"><MessageCircle className="w-5 h-5" /></Button></Link>
-                    <Button variant="ghost" size="icon" className="rounded-full"><Bell className="w-5 h-5" /></Button>
+                <>
+                  {/* Desktop/tablet (md+): search + full nav icons */}
+                  <div className="hidden md:flex items-center gap-6">
+                    <div className="w-96 desktop-search-bar"><SearchComponent /></div>
+                    <nav className="flex items-center gap-1">
+                      <Link to="/marketplace"><Button variant="ghost" size="icon" className="rounded-full"><ShoppingBag className="w-5 h-5" /></Button></Link>
+                      <Link to="/verify"><Button variant="ghost" size="icon" className="rounded-full" title="Verify Certificate"><Award className="w-5 h-5 text-purple-600" /></Button></Link>
+                      <Link to="/upload"><Button variant="ghost" size="icon" className="rounded-full"><Upload className="w-5 h-5" /></Button></Link>
+                      <Link to="/messages"><Button variant="ghost" size="icon" className="rounded-full"><MessageCircle className="w-5 h-5" /></Button></Link>
+                      <Button variant="ghost" size="icon" className="rounded-full"><Bell className="w-5 h-5" /></Button>
+                      {currentUser?.is_admin && (
+                        <Link to="/admin"><Button variant="ghost" size="icon" className="rounded-full" title="Admin Dashboard"><Shield className="w-5 h-5 text-purple-600" /></Button></Link>
+                      )}
+                      <Link to={`/profile/${currentUser.username}`}>
+                        <Button variant="ghost" size="icon" className="rounded-full">
+                          <img src={currentUser.avatar} alt="profile" className="w-8 h-8 rounded-full object-cover" />
+                        </Button>
+                      </Link>
+                    </nav>
+                  </div>
+                  {/* Mobile: centered search */}
+                  <div className="flex md:hidden flex-1 items-center justify-center px-3">
+                    <div style={{ flex: 1, maxWidth: 260 }}><SearchComponent /></div>
+                  </div>
+                  {/* Mobile: bell only */}
+                  <div className="flex md:hidden items-center">
+                    <Button variant="ghost" size="icon" className="rounded-full"><Bell className="w-6 h-6" /></Button>
                     {currentUser?.is_admin && (
-                      <Link to="/admin"><Button variant="ghost" size="icon" className="rounded-full" title="Admin Dashboard"><Shield className="w-5 h-5 text-purple-600" /></Button></Link>
+                      <Link to="/admin"><Button variant="ghost" size="icon" className="rounded-full" title="Admin Dashboard"><Shield className="w-6 h-6 text-purple-600" /></Button></Link>
                     )}
-                    <Link to={`/profile/${currentUser.username}`}>
-                      <Button variant="ghost" size="icon" className="rounded-full">
-                        <img src={currentUser.avatar} alt="profile" className="w-8 h-8 rounded-full object-cover" />
-                      </Button>
-                    </Link>
-                  </nav>
-                </div>
+                  </div>
+                </>
               ) : (
                 <nav className="flex items-center gap-5">
                   <Link to="/login" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Log In</Link>
