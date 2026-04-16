@@ -8,6 +8,8 @@ import { useUser } from '../context/UserContext';
 import Logo from '../components/Logo';
 import { Button } from '../components/ui/Button';
 import { SearchComponent } from '../components/Search';
+import MobileNavFooter from '../components/MobileNavFooter';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 
 const P = '#7c3aed';
 const T = '#0d9488';
@@ -16,7 +18,7 @@ const LOGO = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/
 type VerifyState = 'loading' | 'valid' | 'invalid' | 'revoked' | 'notfound' | 'error' | 'idle';
 
 export default function VerifyCertificate() {
-  const { currentUser } = useUser();
+  const { currentUser, setCurrentUser } = useUser();
   const navigate = useNavigate();
   const { certNumber } = useParams<{ certNumber: string }>();
   const [state, setState] = useState<VerifyState>(certNumber ? 'loading' : 'idle');
@@ -25,6 +27,9 @@ export default function VerifyCertificate() {
   const [manualInput, setManualInput] = useState(certNumber ?? '');
   const [history, setHistory] = useState<Certificate[]>([]);
   const [isVerifiedArtist, setIsVerifiedArtist] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+
+  const handleSignOut = async () => { await setCurrentUser(null); navigate('/'); };
 
   const verify = async (num: string) => {
     if (!num.trim()) return;
@@ -538,6 +543,15 @@ export default function VerifyCertificate() {
 
         </div>
       </div>
+
+      {currentUser && (
+        <MobileNavFooter
+          hasUnreadMessages={false}
+          onChangePasswordClick={() => setShowChangePasswordModal(true)}
+          onSignOut={handleSignOut}
+        />
+      )}
+      {showChangePasswordModal && <ChangePasswordModal onClose={() => setShowChangePasswordModal(false)} />}
     </>
   );
 }

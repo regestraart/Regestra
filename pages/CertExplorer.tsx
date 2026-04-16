@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, CheckCircle, Loader2, ChevronRight, Lock, Upload, MessageCircle, Bell, ShoppingBag, Award, Shield } from 'lucide-react';
 import { certDb, Certificate } from '../services/certificates';
 import { useUser } from '../context/UserContext';
 import Logo from '../components/Logo';
 import { Button } from '../components/ui/Button';
 import { SearchComponent } from '../components/Search';
+import MobileNavFooter from '../components/MobileNavFooter';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 
 const P = '#7c3aed';
 const T = '#0d9488';
@@ -144,8 +146,12 @@ function CertCard({ cert, isLoggedIn }: { cert: Certificate; isLoggedIn: boolean
 }
 
 export default function CertExplorer() {
-  const { currentUser } = useUser();
+  const { currentUser, setCurrentUser } = useUser();
+  const navigate = useNavigate();
   const isLoggedIn = !!currentUser;
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+
+  const handleSignOut = async () => { await setCurrentUser(null); navigate('/'); };
 
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -361,6 +367,15 @@ export default function CertExplorer() {
           )}
         </div>
       </div>
+
+      {currentUser && (
+        <MobileNavFooter
+          hasUnreadMessages={false}
+          onChangePasswordClick={() => setShowChangePasswordModal(true)}
+          onSignOut={handleSignOut}
+        />
+      )}
+      {showChangePasswordModal && <ChangePasswordModal onClose={() => setShowChangePasswordModal(false)} />}
     </>
   );
 }
