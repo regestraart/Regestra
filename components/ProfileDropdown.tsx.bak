@@ -1,0 +1,72 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { User, LogOut, Lock, CreditCard, Award } from 'lucide-react';
+import { createUrl } from '../utils';
+import { User as UserType } from '../data/mock';
+
+interface ProfileDropdownProps {
+  user: UserType;
+  onSignOut: () => void;
+  onNavigate: () => void;
+  onChangePasswordClick: () => void;
+}
+
+const itemClass =
+  'grid w-full grid-cols-[1.5rem_minmax(0,1fr)] items-center gap-x-4 px-4 py-2.5 text-left text-sm font-semibold hover:bg-gray-50';
+
+const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ user, onSignOut, onNavigate, onChangePasswordClick }) => {
+  return (
+    <div
+      className="absolute top-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-zoom-in"
+      style={{ minWidth: 220, width: 'max-content', maxWidth: 280, right: 0 }}
+    >
+      <div className="px-4 py-3 border-b border-gray-100 text-left">
+        <p className="font-bold text-gray-900 text-sm truncate">{user.name}</p>
+        <p className="text-xs text-gray-400 truncate">@{user.username}</p>
+      </div>
+      <div className="py-1">
+        <Link
+          to={createUrl('/profile/:username', { username: user.username })}
+          onClick={onNavigate}
+          className={`${itemClass} text-gray-700`}
+        >
+          <User className="h-5 w-5 text-gray-400" />
+          <span className="block w-full text-left">View Profile</span>
+        </Link>
+        <Link
+          to="/wallet"
+          onClick={onNavigate}
+          className={`${itemClass} text-gray-700`}
+        >
+          <Award className="h-5 w-5 text-purple-500" />
+          <span className="block w-full text-left">Regestra Wallet</span>
+        </Link>
+        <Link
+          to="/subscription"
+          onClick={onNavigate}
+          className={`${itemClass} text-gray-700`}
+        >
+          <CreditCard className="h-5 w-5 text-gray-400" />
+          <span className="block w-full text-left">Subscription</span>
+        </Link>
+        <button
+          onClick={onChangePasswordClick}
+          className={`${itemClass} text-gray-700`}
+        >
+          <Lock className="h-5 w-5 text-gray-400" />
+          <span className="block w-full text-left">Change Password</span>
+        </button>
+        <div className="mx-3 my-1 h-px bg-gray-100" />
+        <button
+          onClick={onSignOut}
+          className={`${itemClass} text-red-500 hover:bg-red-50`}
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="block w-full text-left">Sign Out</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default ProfileDropdown;

@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[dev]
+  command = "npm run dev"
+  port = 8888
+  targetPort = 3000
+  framework = "#custom"
+  autoLaunch = false
+  edgeFunctionsPort = 0
+
+[functions]
+  node_bundler = "esbuild"
+
+# Required for BrowserRouter — serves index.html for all routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
