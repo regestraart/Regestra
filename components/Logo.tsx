@@ -6,11 +6,24 @@ interface LogoProps {
 
 const Logo: React.FC<LogoProps> = ({ className }) => {
   return (
-    <img
-      src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/user_691b6257d4173f2ed6ec3e95/7495ad18b_RegestraLogo.png"
-      alt="Regestra"
+    <span
       className={className}
-    />
+      style={{
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        fontWeight: 800,
+        fontSize: '1.35rem',
+        letterSpacing: '-0.03em',
+        background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 60%, #0d9488 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+        lineHeight: 1,
+        display: 'inline-block',
+        userSelect: 'none',
+      }}
+    >
+      regestra
+    </span>
   );
 };
 
