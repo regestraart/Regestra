@@ -744,7 +744,14 @@ export const db = {
         else addCommentToSocialPost(postId, userId, content);
     },
     async updatePost(userId: string, postId: string, content: string) {
-        if (isSupabaseConfigured) await supabase.from('social_posts').update({ content, updated_at: new Date().toISOString() }).eq('id', postId).eq('author_id', userId);
+        if (isSupabaseConfigured) {
+            const { error } = await supabase
+                .from('social_posts')
+                .update({ content })
+                .eq('id', postId)
+                .eq('author_id', userId);
+            if (error) throw new Error(error.message);
+        }
     },
     async updateComment(userId: string, commentId: string, content: string) {
         if (isSupabaseConfigured) await supabase.from('social_comments').update({ content, updated_at: new Date().toISOString() }).eq('id', commentId).eq('user_id', userId);

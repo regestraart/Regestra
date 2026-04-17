@@ -347,8 +347,9 @@ SELECT 'Repair V14 Applied! Now use the "Project Reload" button in the app.' as 
           setPosts(prev => prev.map(p => p.id === postId ? { ...p, content: editingPostContent.trim() } : p));
           setEditingPostId(null);
           setToast({ message: "Post updated." });
-      } catch (e) {
+      } catch (e: any) {
           console.error(e);
+          setToast({ message: "Failed to save — check your connection and try again." });
       } finally {
           setIsSavingEdit(false);
       }
