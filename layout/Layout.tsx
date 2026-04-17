@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
-import { Upload, MessageCircle, Bell, Loader2, ShoppingBag, Shield, Award } from "lucide-react";
+import { Upload, MessageCircle, Bell, Loader2, ShoppingBag, Shield, Award, Home } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { useUser, _setNavigateRegistry } from "../context/UserContext";
 import NotificationsPopover from "../components/NotificationsPopover";
@@ -95,7 +95,8 @@ export default function Layout() {
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-              <Link to="/"><Logo className="h-7 w-auto" /></Link>
+              {/* Logo — not clickable to social feed */}
+              <span style={{ cursor: "default", display: "inline-flex" }}><Logo className="h-7 w-auto" /></span>
 
               {isLoading && !currentUser ? (
                 <div className="flex items-center justify-center w-40">
@@ -108,6 +109,12 @@ export default function Layout() {
                   <div className="hidden md:flex items-center gap-6">
                     <div className="w-96 desktop-search-bar"><SearchComponent /></div>
                     <nav className="flex items-center gap-1">
+                      {/* Home button — links to Social Posts feed */}
+                      <Link to="/">
+                        <Button variant="ghost" size="icon" className="rounded-full" title="Home">
+                          <Home className="w-5 h-5" />
+                        </Button>
+                      </Link>
                       <Link to="/marketplace"><Button variant="ghost" size="icon" className="rounded-full"><ShoppingBag className="w-5 h-5" /></Button></Link>
                       <Link to="/verify"><Button variant="ghost" size="icon" className="rounded-full" title="Verify Certificate"><Award className="w-5 h-5" /></Button></Link>
                       <Link to="/upload"><Button variant="ghost" size="icon" className="rounded-full"><Upload className="w-5 h-5" /></Button></Link>
@@ -149,20 +156,34 @@ export default function Layout() {
                     </nav>
                   </div>
 
-                  {/* ── MOBILE layout: centered search + bell on right ── */}
+                  {/* ── MOBILE layout: centered search | bell + avatar on right ── */}
                   <div className="flex md:hidden flex-1 items-center justify-center px-3">
                     <div style={{ flex: 1, maxWidth: 260 }}>
                       <SearchComponent />
                     </div>
                   </div>
-                  <div className="flex md:hidden items-center">
-                    {/* Bell — mobile only right slot */}
+                  <div className="flex md:hidden items-center gap-0.5">
+                    {/* Bell */}
                     <div className="relative" ref={notificationsRef}>
                       <Button variant="ghost" size="icon" className="relative rounded-full" onClick={() => setShowNotifications(p => !p)}>
                         <Bell className="w-6 h-6" />
                         {hasUnread && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse" />}
                       </Button>
                       {showNotifications && <NotificationsPopover onClose={() => setShowNotifications(false)} onNotificationsRead={checkAllUnreadStatus} />}
+                    </div>
+                    {/* Avatar — mobile header, opens dropdown downward */}
+                    <div className="relative" ref={profileDropdownRef}>
+                      <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShowProfileDropdown(p => !p)}>
+                        <img src={currentUser.avatar} alt="profile" className="w-8 h-8 rounded-full object-cover" />
+                      </Button>
+                      {showProfileDropdown && (
+                        <ProfileDropdown
+                          user={currentUser}
+                          onSignOut={handleSignOut}
+                          onNavigate={() => setShowProfileDropdown(false)}
+                          onChangePasswordClick={() => { setShowProfileDropdown(false); setShowChangePasswordModal(true); }}
+                        />
+                      )}
                     </div>
                     {currentUser?.is_admin && (
                       <Link to="/admin">
