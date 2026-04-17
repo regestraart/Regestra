@@ -652,10 +652,10 @@ SELECT 'Repair V14 Applied! Now use the "Project Reload" button in the app.' as 
                         )}
                     </div>
                 ) : null}
-                {post.image && <img src={post.image} alt="Post content" className="mt-4 rounded-xl border border-gray-100 w-full max-h-[550px] object-cover shadow-sm" />}
+                {post.image && !hiddenPostIds.has(post.id) && <img src={post.image} alt="Post content" className="mt-4 rounded-xl border border-gray-100 w-full max-h-[550px] object-cover shadow-sm" />}
                 
-                {/* Article Preview Component */}
-                <ArticleCard post={post} />
+                {/* Article Preview — hidden when post is hidden */}
+                {!hiddenPostIds.has(post.id) && <ArticleCard post={post} />}
                 
                 <div className="flex items-center gap-8 mt-4 pt-4 border-t border-gray-50">
                   <button 
