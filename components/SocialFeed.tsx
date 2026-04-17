@@ -332,8 +332,13 @@ SELECT 'Fix Applied! Now REFRESH your browser tab.' as status;`.trim();
       await db.feed.updatePost(currentUser.id, postId, editPostContent.trim());
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, content: editPostContent.trim() } : p));
       setEditingPostId(null);
-    } catch (e) { console.error(e); }
-    finally { setIsSavingEdit(false); }
+      setToast({ message: "Post updated." });
+    } catch (e: any) {
+      console.error(e);
+      setToast({ message: "Failed to save — check your connection and try again." });
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   const handleEditComment = (comment: SocialComment) => {
