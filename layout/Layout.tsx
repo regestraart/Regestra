@@ -29,8 +29,10 @@ export default function Layout() {
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showMobileProfileDropdown, setShowMobileProfileDropdown] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
+  const mobileProfileDropdownRef = useRef<HTMLDivElement>(null);
 
   // Stable ref so callbacks don't need currentUser in their dep arrays
   const currentUserRef = useRef(currentUser);
@@ -69,12 +71,13 @@ export default function Layout() {
     const handler = (e: MouseEvent) => {
       if (notificationsRef.current && !notificationsRef.current.contains(e.target as Node)) setShowNotifications(false);
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target as Node)) setShowProfileDropdown(false);
+      if (mobileProfileDropdownRef.current && !mobileProfileDropdownRef.current.contains(e.target as Node)) setShowMobileProfileDropdown(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const handleSignOut = async () => { await setCurrentUser(null); setShowProfileDropdown(false); navigate("/"); };
+  const handleSignOut = async () => { await setCurrentUser(null); setShowProfileDropdown(false); setShowMobileProfileDropdown(false); navigate("/"); };
   const handleMarkMessagesRead = async () => {
     if (currentUser && hasUnreadMessages) {
       setHasUnreadMessages(false);
@@ -172,16 +175,16 @@ export default function Layout() {
                       {showNotifications && <NotificationsPopover onClose={() => setShowNotifications(false)} onNotificationsRead={checkAllUnreadStatus} />}
                     </div>
                     {/* Avatar — mobile header, opens dropdown downward */}
-                    <div className="relative" ref={profileDropdownRef}>
-                      <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShowProfileDropdown(p => !p)}>
+                    <div className="relative" ref={mobileProfileDropdownRef}>
+                      <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShowMobileProfileDropdown(p => !p)}>
                         <img src={currentUser.avatar} alt="profile" className="w-8 h-8 rounded-full object-cover" />
                       </Button>
-                      {showProfileDropdown && (
+                      {showMobileProfileDropdown && (
                         <ProfileDropdown
                           user={currentUser}
                           onSignOut={handleSignOut}
-                          onNavigate={() => setShowProfileDropdown(false)}
-                          onChangePasswordClick={() => { setShowProfileDropdown(false); setShowChangePasswordModal(true); }}
+                          onNavigate={() => setShowMobileProfileDropdown(false)}
+                          onChangePasswordClick={() => { setShowMobileProfileDropdown(false); setShowChangePasswordModal(true); }}
                         />
                       )}
                     </div>

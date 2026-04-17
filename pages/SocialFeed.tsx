@@ -83,6 +83,13 @@ export default function SocialFeed() {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [toast, setToast] = useState<{ message: string, undoAction?: () => void } | null>(null);
   const [expandedPostIds, setExpandedPostIds] = useState(new Set<string>());
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editingPostContent, setEditingPostContent] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [hiddenPostIds, setHiddenPostIds] = useState(new Set<string>());
+  const [hiddenPosts, setHiddenPosts] = useState<SocialPost[]>([]);
+  const [showHiddenSection, setShowHiddenSection] = useState(false);
+  const [loadingHidden, setLoadingHidden] = useState(false);
 
   const metadataAbortController = useRef<AbortController | null>(null);
   const fetcherTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -103,8 +110,12 @@ export default function SocialFeed() {
     try {
       setLoading(true);
       setError(null);
-      const recentPosts = await db.feed.getRecentPosts(currentUserRef.current?.id);
+      const [recentPosts, persistedHiddenIds] = await Promise.all([
+        db.feed.getRecentPosts(currentUserRef.current?.id),
+        db.feed.getHiddenPostIds(currentUserRef.current?.id || ''),
+      ]);
       setPosts(recentPosts);
+      setHiddenPostIds(persistedHiddenIds);
     } catch (error: any) {
       console.error("Failed to fetch posts", error);
       setError(error.message || "Failed to load feed.");
@@ -317,15 +328,64 @@ SELECT 'Repair V14 Applied! Now use the "Project Reload" button in the app.' as 
   
   const handleDeletePost = async (postId: string) => {
       await db.feed.deletePost(currentUser!.id, postId);
-      await fetchPosts();
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      setActiveMenuId(null);
+      setToast({ message: "Post deleted." });
+  };
+
+  const handleEditPost = (post: SocialPost) => {
+      setEditingPostId(post.id);
+      setEditingPostContent(post.content || '');
       setActiveMenuId(null);
   };
-  
-  const handleHidePost = async (postId: string) => {
-      await db.feed.hidePost(currentUser!.id, postId);
-      setPosts(posts.filter(p => p.id !== postId));
+
+  const handleSaveEdit = async (postId: string) => {
+      if (!currentUser || !editingPostContent.trim()) return;
+      setIsSavingEdit(true);
+      try {
+          await db.feed.updatePost(currentUser.id, postId, editingPostContent.trim());
+          setPosts(prev => prev.map(p => p.id === postId ? { ...p, content: editingPostContent.trim() } : p));
+          setEditingPostId(null);
+          setToast({ message: "Post updated." });
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsSavingEdit(false);
+      }
+  };
+
+  const handleHideToggle = async (postId: string) => {
+      const isCurrentlyHidden = hiddenPostIds.has(postId);
+      if (isCurrentlyHidden) {
+          await db.feed.unhidePost(currentUser!.id, postId);
+          setHiddenPostIds(prev => { const s = new Set(prev); s.delete(postId); return s; });
+          setHiddenPosts(prev => prev.filter(p => p.id !== postId));
+          setToast({ message: "Post visible in your feed." });
+      } else {
+          await db.feed.hidePost(currentUser!.id, postId);
+          setHiddenPostIds(prev => new Set(prev).add(postId));
+          setToast({ message: "Post hidden from your feed." });
+      }
       setActiveMenuId(null);
-      setToast({ message: "Post hidden from your feed." });
+  };
+
+  const loadHiddenPosts = async () => {
+      if (!currentUser) return;
+      setLoadingHidden(true);
+      try {
+          const posts = await db.feed.getHiddenPosts(currentUser.id);
+          setHiddenPosts(posts);
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setLoadingHidden(false);
+      }
+  };
+
+  const handleToggleHiddenSection = () => {
+      const next = !showHiddenSection;
+      setShowHiddenSection(next);
+      if (next && hiddenPosts.length === 0) loadHiddenPosts();
   };
 
   const isSchemaError = error?.includes('SCHEMA MISMATCH') || error?.includes('SYNC ERROR');
@@ -489,22 +549,86 @@ SELECT 'Repair V14 Applied! Now use the "Project Reload" button in the app.' as 
                       </div>
                     </div>
                   </Link>
-                  {currentUser?.id === post.authorId && (
-                    <div className={`relative post-menu-${post.id}`}>
-                      <Button variant="ghost" size="icon" className="rounded-full text-gray-400" onClick={() => setActiveMenuId(post.id)}>
-                        <MoreHorizontal className="w-5 h-5" />
-                      </Button>
-                      {activeMenuId === post.id && (
-                        <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-100 w-44 z-10 animate-zoom-in py-1">
-                          <button onClick={() => handleDeletePost(post.id)} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"><Trash2 className="w-4 h-4" /> Delete Post</button>
-                          <button onClick={() => handleHidePost(post.id)} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition-colors"><EyeOff className="w-4 h-4" /> Hide from Feed</button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {/* ••• menu — visible on ALL posts for hide/unhide; edit+delete only for own author */}
+                  <div className={`relative post-menu-${post.id}`}>
+                    <Button variant="ghost" size="icon" className="rounded-full text-gray-400 hover:text-gray-600" onClick={() => setActiveMenuId(activeMenuId === post.id ? null : post.id)}>
+                      <MoreHorizontal className="w-5 h-5" />
+                    </Button>
+                    {activeMenuId === post.id && (
+                      <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-100 w-48 z-20 animate-zoom-in py-1">
+
+                        {/* Edit — own author only (includes admin editing their own posts) */}
+                        {currentUser?.id === post.authorId && (
+                          <button
+                            onClick={() => handleEditPost(post)}
+                            className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            Edit Post
+                          </button>
+                        )}
+
+                        {/* Hide / Unhide — available to ALL users on any post */}
+                        <button
+                          onClick={() => handleHideToggle(post.id)}
+                          className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                        >
+                          {hiddenPostIds.has(post.id)
+                            ? <><RotateCcw className="w-4 h-4" /> Unhide Post</>
+                            : <><EyeOff className="w-4 h-4" /> Hide from Feed</>
+                          }
+                        </button>
+
+                        {/* Delete — own author only (includes admin deleting their own posts) */}
+                        {currentUser?.id === post.authorId && (
+                          <button
+                            onClick={() => handleDeletePost(post.id)}
+                            className="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" /> Delete Post
+                          </button>
+                        )}
+
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
-                {post.content && (
+                {/* Hidden post overlay */}
+                {hiddenPostIds.has(post.id) && (
+                  <div className="mt-3 px-3 py-2 rounded-lg bg-gray-50 border border-dashed border-gray-200 flex items-center justify-between">
+                    <span className="text-xs text-gray-400 font-semibold flex items-center gap-1.5"><EyeOff className="w-3.5 h-3.5" /> Hidden from your feed</span>
+                    <button onClick={() => handleHideToggle(post.id)} className="text-xs text-purple-600 font-bold hover:underline flex items-center gap-1"><RotateCcw className="w-3 h-3" /> Unhide</button>
+                  </div>
+                )}
+
+                {/* Post content — edit mode or display mode */}
+                {editingPostId === post.id ? (
+                  <div className="mt-4">
+                    <textarea
+                      value={editingPostContent}
+                      onChange={e => setEditingPostContent(e.target.value)}
+                      className="w-full rounded-xl border border-purple-200 bg-purple-50/30 p-3 text-[15px] text-gray-800 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 min-h-[80px]"
+                      autoFocus
+                    />
+                    <div className="flex gap-2 mt-2 justify-end">
+                      <button
+                        onClick={() => setEditingPostId(null)}
+                        className="px-4 py-1.5 rounded-full text-sm font-semibold text-gray-500 hover:bg-gray-100 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleSaveEdit(post.id)}
+                        disabled={isSavingEdit || !editingPostContent.trim()}
+                        className="px-4 py-1.5 rounded-full text-sm font-bold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                      >
+                        {isSavingEdit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                ) : post.content && !hiddenPostIds.has(post.id) ? (
                     <div className="mt-4 text-[15px] text-gray-800 whitespace-pre-wrap leading-relaxed">
                         {isLongPost && !isExpanded ? (
                             <p>
@@ -527,7 +651,7 @@ SELECT 'Repair V14 Applied! Now use the "Project Reload" button in the app.' as 
                             </p>
                         )}
                     </div>
-                )}
+                ) : null}
                 {post.image && <img src={post.image} alt="Post content" className="mt-4 rounded-xl border border-gray-100 w-full max-h-[550px] object-cover shadow-sm" />}
                 
                 {/* Article Preview Component */}
@@ -603,6 +727,71 @@ SELECT 'Repair V14 Applied! Now use the "Project Reload" button in the app.' as 
                    </div>
                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-4">Discover Artists & Start Connecting</p>
                 </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Hidden Posts Section ────────────────────────────── */}
+        <div className="mt-8">
+          <button
+            onClick={handleToggleHiddenSection}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-gray-50 border border-dashed border-gray-200 hover:bg-gray-100 transition-colors group"
+          >
+            <span className="flex items-center gap-2 text-sm font-bold text-gray-500 group-hover:text-gray-700">
+              <EyeOff className="w-4 h-4" />
+              Hidden Posts
+              {hiddenPostIds.size > 0 && (
+                <span className="bg-gray-200 text-gray-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                  {hiddenPostIds.size}
+                </span>
+              )}
+            </span>
+            <svg
+              className={`w-4 h-4 text-gray-400 transition-transform ${showHiddenSection ? 'rotate-180' : ''}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showHiddenSection && (
+            <div className="mt-3 space-y-3 animate-fade-in">
+              {loadingHidden ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
+                </div>
+              ) : hiddenPosts.length === 0 ? (
+                <div className="text-center py-8 text-sm text-gray-400 font-medium">
+                  No hidden posts
+                </div>
+              ) : (
+                hiddenPosts.map(post => (
+                  <div key={post.id} className="bg-white rounded-2xl border border-dashed border-gray-200 p-4 opacity-70 hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-between mb-2">
+                      <Link to={createUrl('/profile/:username', { username: post.authorUsername })} className="flex items-center gap-2 group">
+                        <img src={post.authorAvatar} alt={post.authorUsername} className="w-8 h-8 rounded-full object-cover" />
+                        <div>
+                          <p className="text-sm font-bold text-gray-700 group-hover:text-purple-600 transition-colors">{post.authorUsername}</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{post.timestampStr}</p>
+                        </div>
+                      </Link>
+                      <button
+                        onClick={() => handleHideToggle(post.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 transition-colors"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        Unhide
+                      </button>
+                    </div>
+                    {post.content && (
+                      <p className="text-sm text-gray-500 leading-relaxed line-clamp-2 mt-1">{post.content}</p>
+                    )}
+                    {post.image && (
+                      <img src={post.image} alt="Post" className="mt-2 rounded-lg w-full max-h-32 object-cover opacity-60" />
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>

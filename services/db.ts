@@ -695,7 +695,50 @@ export const db = {
         if (isSupabaseConfigured) await supabase.from('social_posts').delete().eq('id', postId).eq('author_id', userId);
         else { deleteSocialPost(postId); markPostAsDeletedLocally(userId, postId); }
     },
-    async hidePost(userId: string, postId: string) { toggleHideSocialPost(userId, postId); },
+    async hidePost(userId: string, postId: string) {
+        if (isSupabaseConfigured) {
+            await supabase.from('hidden_posts').upsert({ user_id: userId, post_id: postId }, { onConflict: 'user_id,post_id' });
+        }
+        toggleHideSocialPost(userId, postId);
+    },
+    async unhidePost(userId: string, postId: string) {
+        if (isSupabaseConfigured) {
+            await supabase.from('hidden_posts').delete().eq('user_id', userId).eq('post_id', postId);
+        }
+        toggleHideSocialPost(userId, postId);
+    },
+    async getHiddenPostIds(userId: string): Promise<Set<string>> {
+        if (isSupabaseConfigured) {
+            const { data } = await supabase.from('hidden_posts').select('post_id').eq('user_id', userId);
+            return new Set((data || []).map((r: any) => r.post_id));
+        }
+        return getHiddenPostIds(userId);
+    },
+    async getHiddenPosts(userId: string): Promise<SocialPost[]> {
+        if (!isSupabaseConfigured) return [];
+        const { data: hiddenRows } = await supabase.from('hidden_posts').select('post_id').eq('user_id', userId);
+        if (!hiddenRows || hiddenRows.length === 0) return [];
+        const postIds = hiddenRows.map((r: any) => r.post_id);
+        const { data } = await supabase
+            .from('social_posts')
+            .select('*, profiles!inner(*), likes(user_id), social_comments(*, profiles(*))')
+            .in('id', postIds)
+            .order('created_at', { ascending: false });
+        return (data || []).map((post: any) => ({
+            id: post.id, authorId: post.author_id, authorName: post.profiles?.full_name || 'User',
+            authorUsername: post.profiles?.username || 'user', authorAvatar: post.profiles?.avatar_url || DEFAULT_AVATAR_URL,
+            content: post.content || '', image: post.image_url || undefined,
+            articleUrl: post.article_url || undefined, articleTitle: post.article_title || undefined,
+            articleDescription: post.article_description || undefined, articleImage: post.article_image || undefined,
+            timestamp: new Date(post.created_at).getTime(), timestampStr: new Date(post.created_at).toLocaleDateString(),
+            likes: (post.likes || []).map((l: any) => l.user_id),
+            comments: (post.social_comments || []).map((c: any) => ({
+                id: c.id, userId: c.user_id, userUsername: c.profiles?.username || 'user',
+                userAvatar: c.profiles?.avatar_url || DEFAULT_AVATAR_URL, text: c.content,
+                timestamp: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }))
+        }));
+    },
     async addComment(postId: string, userId: string, content: string) {
         if (isSupabaseConfigured) await supabase.from('social_comments').insert({ post_id: postId, user_id: userId, content });
         else addCommentToSocialPost(postId, userId, content);
