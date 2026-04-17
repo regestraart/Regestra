@@ -1,15 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useUser } from "../context/UserContext";
 import SocialFeed from "../components/SocialFeed";
 import { Link } from "react-router-dom";
 import {
-  ArrowRight, Sparkles, Palette, Upload, Grid, Search,
-  Clock, Globe, MessageCircle, TrendingUp, ChevronDown,
-  Check, Users, Compass, Zap, ShoppingBag,
+  ArrowRight, Sparkles, Palette, Globe,
+  Clock, MessageCircle, TrendingUp, ChevronDown,
+  Check, Users, Compass, ShoppingBag, Award,
 } from "lucide-react";
-import { Button } from "../components/ui/Button";
 
-/* ── tokens ─────────────────────────────────────────────────────────────── */
+/* ── Brand tokens ──────────────────────────────────────────────────── */
 const P  = "#7c3aed";
 const P2 = "#6d28d9";
 const P3 = "#5b21b6";
@@ -18,211 +17,305 @@ const T2 = "#0f766e";
 const LP = "#f5f3ff";
 const LT = "#f0fdfa";
 
-/* ── shared helpers ─────────────────────────────────────────────────────── */
-const Badge = ({ children, teal = false }: { children: React.ReactNode; teal?: boolean }) => (
-  <span style={{
-    display: "inline-block",
-    background: teal ? "rgba(13,148,136,0.12)" : "rgba(124,58,237,0.1)",
-    color: teal ? T : P,
-    border: `1px solid ${teal ? "rgba(13,148,136,0.22)" : "rgba(124,58,237,0.18)"}`,
-    borderRadius: 999, padding: "4px 14px",
-    fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
-    textTransform: "uppercase" as const,
-  }}>{children}</span>
-);
+/* ── Unsplash images — with UTM so CORS works in browser ─────────────
+   All images use the Unsplash CDN with auto=format for best loading   */
+const IMG = {
+  heroArtist:   "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&w=1600&q=80",
+  studioDetail: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&w=900&q=80",
+  gallery:      "https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&w=1400&q=80",
+  handsDetail:  "https://images.unsplash.com/photo-1541961017774-22349e4a1262?auto=format&w=900&q=80",
+  collector:    "https://images.unsplash.com/photo-1578321272176-b7bbc0679853?auto=format&w=1200&q=80",
+  palette:      "https://images.unsplash.com/photo-1615184697985-c9bde1b07da7?auto=format&w=900&q=80",
+  galleryWall:  "https://images.unsplash.com/photo-1518998053901-5348d3961a04?auto=format&w=1400&q=80",
+};
 
-function HoverCard({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
+/* ── Scroll fade ───────────────────────────────────────────────────── */
+function useFadeIn(threshold = 0.1) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setVis(true); obs.disconnect(); }
+    }, { threshold });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return { ref, vis };
+}
+function FadeIn({ children, delay = 0, style = {} }: {
+  children: React.ReactNode; delay?: number; style?: React.CSSProperties;
+}) {
+  const { ref, vis } = useFadeIn();
   return (
-    <div
-      style={{ transition: "transform 0.22s, box-shadow 0.22s", ...style }}
-      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-6px)"; e.currentTarget.style.boxShadow = "0 24px 56px rgba(124,58,237,0.18)"; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = (style as any).boxShadow || "0 2px 16px rgba(0,0,0,0.07)"; }}
-    >
-      {children}
-    </div>
+    <div ref={ref} style={{
+      opacity: vis ? 1 : 0,
+      transform: vis ? "translateY(0)" : "translateY(24px)",
+      transition: `opacity 0.6s ease ${delay}ms, transform 0.6s ease ${delay}ms`,
+      ...style,
+    }}>{children}</div>
   );
 }
 
-/* ── 1. HERO ─────────────────────────────────────────────────────────────── */
-function Hero() {
+/* ── Img with fallback purple bg so layout never breaks ────────────── */
+function Photo({ src, alt, style = {} }: { src: string; alt: string; style?: React.CSSProperties }) {
   return (
-    <section style={{
-      position: "relative", overflow: "hidden",
-      background: `linear-gradient(145deg, ${P3} 0%, ${P2} 35%, ${P} 65%, ${T} 100%)`,
-      color: "#fff",
-    }}>
-      {/* Radial glows */}
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
-        backgroundImage:
-          `radial-gradient(ellipse at 12% 55%, ${T}30 0%, transparent 50%),` +
-          `radial-gradient(ellipse at 88% 15%, ${P3}55 0%, transparent 48%),` +
-          `radial-gradient(ellipse at 55% 90%, ${T2}25 0%, transparent 45%)`,
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      style={{ display: "block", backgroundColor: `${P}22`, ...style }}
+      onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.3"; }}
+    />
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   1. HERO
+══════════════════════════════════════════════════════════════════ */
+function Hero() {
+  const words = ["Collectors.", "Galleries.", "Dreamers.", "Believers."];
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 3800);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <section style={{ position: "relative", overflow: "hidden", minHeight: "94vh", display: "flex", alignItems: "center" }}>
+      {/* Background photo */}
+      <Photo
+        src={IMG.heroArtist}
+        alt="Artist at work"
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }}
+      />
+      {/* Brand purple overlay */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `linear-gradient(115deg, ${P3}f2 0%, ${P2}d8 35%, ${P}b0 62%, rgba(13,148,136,0.65) 100%)`,
       }} />
+      {/* Bottom fade */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 140, background: "linear-gradient(to bottom, transparent, #faf8ff)", pointerEvents: "none" }} />
       {/* Dot grid */}
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
-        backgroundImage: "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)",
-        backgroundSize: "28px 28px",
-      }} />
+      <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)", backgroundSize: "30px 30px", pointerEvents: "none" }} />
 
-      <div style={{ position: "relative", maxWidth: 1100, margin: "0 auto", padding: "112px 24px 108px", textAlign: "center" }}>
-        <div style={{
-          display: "inline-flex", alignItems: "center", gap: 8,
-          background: "rgba(255,255,255,0.13)", backdropFilter: "blur(12px)",
-          border: "1px solid rgba(255,255,255,0.2)",
-          borderRadius: 999, padding: "7px 20px", marginBottom: 36,
-          fontSize: 13, fontWeight: 600, letterSpacing: "0.04em",
+      <div style={{ position: "relative", maxWidth: 1200, margin: "0 auto", padding: "clamp(100px,13vw,160px) clamp(20px,5vw,48px) clamp(120px,15vw,180px)", width: "100%" }}>
+        {/* Eyebrow */}
+        <span style={{
+          display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 32,
+          background: "rgba(255,255,255,0.15)", backdropFilter: "blur(16px)",
+          border: "1px solid rgba(255,255,255,0.3)", borderRadius: 999,
+          padding: "8px 20px", fontSize: 11, fontWeight: 700,
+          letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff",
         }}>
-          <Sparkles style={{ width: 14, height: 14 }} />
-          Where Art Finds Its Audience
-        </div>
+          <Sparkles style={{ width: 12, height: 12 }} />
+          For Artists &amp; Collectors
+        </span>
 
-        <h1 className="rg-display rg-hero-glow" style={{ marginBottom: 28, color: "#fff" }}>
-          Art That Connects.<br />
-          <span className="rg-grad-text-teal">People Who Care.</span>
+        {/* Headline */}
+        <h1 style={{
+          fontSize: "clamp(3.2rem, 9vw, 7.6rem)", fontWeight: 900,
+          letterSpacing: "-0.04em", lineHeight: 0.94,
+          color: "#fff", margin: "0 0 24px",
+          hyphens: "none",
+        }}>
+          <span style={{ display: "block" }}>Art That</span>
+          <span style={{
+            display: "block",
+            background: "linear-gradient(100deg, #e9d5ff 0%, #99f6e4 65%)",
+            WebkitBackgroundClip: "text", backgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}>Connects</span>
+          <span style={{ display: "block", fontSize: "0.6em", color: "rgba(255,255,255,0.95)", marginTop: 6 }}>People Who Care.</span>
         </h1>
 
+        {/* Animated word */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
+          <span style={{ fontSize: "clamp(1rem, 1.8vw, 1.1rem)", color: "rgba(255,255,255,0.88)", fontWeight: 500 }}>A platform made for Artists and</span>
+          <span key={tick} style={{
+            fontSize: "clamp(1rem, 1.8vw, 1.1rem)", fontWeight: 800, color: "#99f6e4",
+            animation: "rg-word-pop 0.38s cubic-bezier(0.34,1.56,0.64,1) both",
+          }}>{words[tick % words.length]}</span>
+        </div>
+
         <p style={{
-          fontSize: "clamp(1rem, 2.5vw, 1.18rem)", fontWeight: 400,
-          color: "rgba(255,255,255,0.84)", maxWidth: 520,
-          margin: "0 auto 52px", lineHeight: 1.82,
-          letterSpacing: "0.005em",
+          fontSize: "clamp(1rem, 1.7vw, 1.1rem)", color: "rgba(255,255,255,0.85)",
+          maxWidth: 460, lineHeight: 1.78, marginBottom: 44,
+          fontWeight: 400, hyphens: "none",
         }}>
-          Whether you create it or collect it, Regestra is built for you.
-          Share your work, discover emerging artists, and connect with a
-          community that genuinely cares about art.
+          A place to share your work, discover what moves you, and find the people who truly see it.
         </p>
 
-        {/* CTA row */}
-        <div style={{
-          display: "flex", flexWrap: "wrap",
-          gap: 16, justifyContent: "center", alignItems: "center",
-          padding: "0 16px",
-        }}>
-          <Link to="/sign-up">
-            <Button size="xl" variant="primary-light" style={{
-              borderRadius: 999, fontWeight: 800,
-              boxShadow: "0 8px 40px rgba(0,0,0,0.28)", fontSize: "1rem",
-            }}>
-              Get Started Free
-              <ArrowRight style={{ marginLeft: 8, width: 18, height: 18 }} />
-            </Button>
-          </Link>
-
-          <Link to="/gallery" style={{ textDecoration: "none" }}>
-            <button
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                padding: "14px 28px", borderRadius: 999,
-                fontSize: "1rem", fontWeight: 700,
-                color: "#fff",
-                background: "rgba(255,255,255,0.08)",
-                border: "1.5px solid rgba(255,255,255,0.55)",
-                cursor: "pointer",
-                backdropFilter: "blur(6px)",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.12)",
-                transition: "background 200ms ease, border-color 200ms ease, box-shadow 200ms ease",
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.18)";
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.8)";
-                e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.18)";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.55)";
-                e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.12)";
-              }}
+        {/* CTAs */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 56 }}>
+          <Link to="/sign-up" style={{ textDecoration: "none" }}>
+            <button style={{
+              display: "inline-flex", alignItems: "center", gap: 10, padding: "15px 34px",
+              borderRadius: 999, fontSize: "1rem", fontWeight: 800,
+              background: "#fff", color: P2, border: "none", cursor: "pointer",
+              boxShadow: "0 8px 40px rgba(0,0,0,0.25)",
+              transition: "transform 0.18s, box-shadow 0.18s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 16px 48px rgba(0,0,0,0.3)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 8px 40px rgba(0,0,0,0.25)"; }}
             >
-              View Gallery
+              Start for Free <ArrowRight style={{ width: 17, height: 17 }} />
+            </button>
+          </Link>
+          <Link to="/gallery" style={{ textDecoration: "none" }}>
+            <button style={{
+              display: "inline-flex", alignItems: "center", gap: 8, padding: "15px 28px",
+              borderRadius: 999, fontSize: "1rem", fontWeight: 700,
+              color: "#fff", background: "rgba(255,255,255,0.12)",
+              border: "1.5px solid rgba(255,255,255,0.38)",
+              cursor: "pointer", backdropFilter: "blur(8px)",
+              transition: "background 0.18s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.22)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
+            >
+              Browse as a Collector
             </button>
           </Link>
         </div>
 
-        {/* Floating chips */}
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginTop: 56 }}>
+        {/* Trust row */}
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
           {[
-            { icon: <Palette      style={{ width: 13, height: 13 }} />, text: "Artist portfolios" },
-            { icon: <Search       style={{ width: 13, height: 13 }} />, text: "Social discovery"  },
-            { icon: <Globe        style={{ width: 13, height: 13 }} />, text: "Global community"  },
-            { icon: <ShoppingBag  style={{ width: 13, height: 13 }} />, text: "Marketplace"       },
+            { icon: <Palette style={{ width: 13, height: 13 }} />, text: "Artist Portfolios" },
+            { icon: <ShoppingBag style={{ width: 13, height: 13 }} />, text: "Marketplace" },
+            { icon: <Award style={{ width: 13, height: 13 }} />, text: "Certificates" },
+            { icon: <Globe style={{ width: 13, height: 13 }} />, text: "Global Community" },
           ].map(c => (
-            <div key={c.text} style={{
-              display: "inline-flex", alignItems: "center", gap: 7,
-              background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              borderRadius: 999, padding: "6px 16px", fontSize: 12, fontWeight: 500,
-            }}>
+            <span key={c.text} style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.65)", fontSize: 12, fontWeight: 600, letterSpacing: "0.03em" }}>
               {c.icon}{c.text}
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   2. INTRO — mission + photo mosaic
+══════════════════════════════════════════════════════════════════ */
+function IntroBand() {
+  return (
+    <section style={{ background: "#faf8ff", padding: "clamp(64px,8vw,100px) clamp(20px,5vw,48px)" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+          gap: "clamp(40px,6vw,80px)",
+          alignItems: "center",
+        }}>
+          <FadeIn>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: P, marginBottom: 20 }}>Our Mission</p>
+              <h2 style={{
+                fontSize: "clamp(2rem, 4.5vw, 3.4rem)", fontWeight: 900,
+                letterSpacing: "-0.03em", lineHeight: 1.02,
+                color: "#1a1a2e", margin: "0 0 20px", hyphens: "none",
+              }}>
+                Where art finds<br />
+                <span style={{ background: `linear-gradient(135deg, ${P}, ${T})`, WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                  its audience.
+                </span>
+              </h2>
+              <p style={{ fontSize: "1rem", color: "#1a1a2e", lineHeight: 1.9, marginBottom: 14, fontWeight: 500, hyphens: "none" }}>
+                Regestra is where artists and art lovers find each other. Creators build a presence that lasts. Collectors discover work they genuinely fall for.
+              </p>
+              <p style={{ fontSize: "1rem", color: "#374151", lineHeight: 1.9, hyphens: "none" }}>
+                No gatekeepers, no commission walls. Just the art and the people who are drawn to it.
+              </p>
             </div>
-          ))}
+          </FadeIn>
+
+          {/* Photo mosaic — fixed row heights so it never collapses */}
+          <FadeIn delay={100}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gridTemplateRows: "180px 180px",
+              gap: 10,
+            }}>
+              {/* Tall left photo spans both rows */}
+              <div style={{ gridRow: "span 2", borderRadius: 18, overflow: "hidden", boxShadow: `0 8px 32px ${P}22` }}>
+                <Photo src={IMG.studioDetail} alt="Artist at canvas" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+              <div style={{ borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}>
+                <Photo src={IMG.palette} alt="Artist palette" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+              <div style={{ borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}>
+                <Photo src={IMG.handsDetail} alt="Artist hands" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+            </div>
+          </FadeIn>
         </div>
       </div>
     </section>
   );
 }
 
-/* ── 2. VALUE BAND  ── deep purple, white cards ──────────────────────────── */
-function ValueBand() {
+/* ══════════════════════════════════════════════════════════════════
+   3. VALUE CARDS — equal-height grid on purple gradient
+══════════════════════════════════════════════════════════════════ */
+function ValueCards() {
   const cards = [
-    {
-      icon: <Palette style={{ width: 26, height: 26, color: "#fff" }} />,
-      iconGrad: `linear-gradient(135deg, ${P}, ${P2})`,
-      iconShadow: `0 6px 20px ${P}55`,
-      title: "Living Portfolios",
-      body: "Artists get a complete, auto-updating catalog. Art lovers get a curated feed of work that matches their taste. One platform, built for both.",
-    },
-    {
-      icon: <Users style={{ width: 26, height: 26, color: "#fff" }} />,
-      iconGrad: `linear-gradient(135deg, ${T}, ${T2})`,
-      iconShadow: `0 6px 20px ${T}55`,
-      title: "Real Connections",
-      body: "Follow artists you love, build your audience, and engage with collectors and creators who genuinely care about art — not just content.",
-    },
-    {
-      icon: <Globe style={{ width: 26, height: 26, color: "#fff" }} />,
-      iconGrad: `linear-gradient(135deg, ${P}, ${T})`,
-      iconShadow: `0 6px 20px ${P}44`,
-      title: "Direct Commerce",
-      body: "Artists list their work, collectors browse and buy. Message sellers directly to arrange a purchase. On-platform checkout coming soon.",
-    },
+    { accent: P,  title: "Living Portfolios", body: "Your work, always current and beautifully presented. Artists get a portfolio worth sharing. Collectors get a personal feed that actually reflects their taste.", icon: <Palette style={{ width: 26, height: 26, color: "#fff" }} /> },
+    { accent: T,  title: "Real Connections",  body: "Follow the artists you love. Build an audience that genuinely cares. Talk to collectors and creators the way you would in person.", icon: <Users style={{ width: 26, height: 26, color: "#fff" }} /> },
+    { accent: P,  title: "Direct Commerce",   body: "See something you love? Reach out directly. No auction house fees, no gallery overhead. Just you and the artist who created it.", icon: <ShoppingBag style={{ width: 26, height: 26, color: "#fff" }} /> },
+    { accent: T,  title: "Authenticated Art", body: "Every piece traces back to its creator. A verifiable record that gives collectors peace of mind and gives artists the recognition they deserve.", icon: <Award style={{ width: 26, height: 26, color: "#fff" }} /> },
   ];
 
   return (
     <section style={{
+      background: `linear-gradient(145deg, ${P3} 0%, ${P2} 40%, ${P} 70%, ${T} 100%)`,
+      padding: "clamp(72px,9vw,108px) clamp(20px,5vw,48px)",
       position: "relative", overflow: "hidden",
-      background: `linear-gradient(155deg, ${P3} 0%, ${P2} 45%, #1e1b4b 100%)`,
-      padding: "96px 24px",
     }}>
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
-        backgroundImage:
-          `radial-gradient(ellipse at 80% 20%, ${T}22 0%, transparent 50%),` +
-          `radial-gradient(ellipse at 10% 70%, ${P}30 0%, transparent 50%)`,
-      }} />
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: `radial-gradient(ellipse at 80% 20%, ${T}28 0%, transparent 50%)` }} />
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: "radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
 
-      <div style={{ position: "relative", maxWidth: 1080, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 60 }}>
-          <h2 className="rg-h2 rg-hero-glow-dark" style={{ color: "#fff", marginBottom: 18 }}>
-            Authentic Art.{" "}
-            <span className="rg-grad-text-teal">Trusted Connections.</span>
-          </h2>
-          <p className="rg-body-lg" style={{ color: "rgba(255,255,255,0.76)", maxWidth: 560, margin: "0 auto" }}>
-            Regestra brings together artists and art lovers in one space —
-            where creators get the visibility they deserve and collectors
-            find work they truly love.
-          </p>
-        </div>
+      <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative" }}>
+        <FadeIn>
+          <div style={{ textAlign: "center", marginBottom: "clamp(40px,5vw,60px)" }}>
+            <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", marginBottom: 14 }}>Everything in One Place</p>
+            <h2 style={{ fontSize: "clamp(2rem, 4.5vw, 3.2rem)", fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1.05, color: "#fff", margin: 0, hyphens: "none" }}>
+              Authentic Art. Trusted Connections.
+            </h2>
+          </div>
+        </FadeIn>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
-          {cards.map(c => (
-            <HoverCard key={c.title} style={{
-              background: "rgba(255,255,255,0.96)",
-              borderRadius: 20, padding: "36px 30px",
-              boxShadow: "0 4px 32px rgba(0,0,0,0.2)",
-            }}>
-              <div style={{ width: 56, height: 56, borderRadius: 16, background: c.iconGrad, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 22, boxShadow: c.iconShadow }}>{c.icon}</div>
-              <h3 className="rg-h3" style={{ color: "#1a1a2e", marginBottom: 12 }}>{c.title}</h3>
-              <p className="rg-body" style={{ color: "#4b5563" }}>{c.body}</p>
-            </HoverCard>
+        {/* Cards grid — alignItems:stretch ensures equal height */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: 18,
+          alignItems: "stretch",
+        }}>
+          {cards.map((c, i) => (
+            <FadeIn key={c.title} delay={i * 70} style={{ display: "flex" }}>
+              <div style={{
+                flex: 1,
+                background: "rgba(255,255,255,0.97)",
+                borderRadius: 22,
+                padding: "clamp(24px,3vw,36px) clamp(20px,2.5vw,30px)",
+                boxShadow: "0 4px 28px rgba(0,0,0,0.18)",
+                display: "flex", flexDirection: "column",
+                transition: "transform 0.22s, box-shadow 0.22s",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-5px)"; e.currentTarget.style.boxShadow = "0 18px 48px rgba(0,0,0,0.22)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 4px 28px rgba(0,0,0,0.18)"; }}
+              >
+                <div style={{ width: 54, height: 54, borderRadius: 14, marginBottom: 20, background: `linear-gradient(135deg, ${c.accent}, ${c.accent === P ? T : P2})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: `0 6px 18px ${c.accent}44` }}>
+                  {c.icon}
+                </div>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.015em", color: "#1a1a2e", marginBottom: 10, hyphens: "none" }}>{c.title}</h3>
+                <p style={{ fontSize: "0.9rem", color: "#374151", lineHeight: 1.8, margin: 0, flexGrow: 1, hyphens: "none" }}>{c.body}</p>
+              </div>
+            </FadeIn>
           ))}
         </div>
       </div>
@@ -230,100 +323,283 @@ function ValueBand() {
   );
 }
 
-/* ── 3. ARTIST FIRST  ── light purple tinted ─────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════
+   4. ARTIST FIRST — split with photo
+══════════════════════════════════════════════════════════════════ */
 function ArtistFirst() {
-  const pillars = [
-    { label: "Artists",   desc: "Portfolios for every creator, at every career stage",   teal: false },
-    { label: "Discovery", desc: "Explore art that moves you, follow the artists behind it", teal: true  },
-    { label: "Community", desc: "Real relationships between artists and art lovers",      teal: false },
-    { label: "Commerce",  desc: "Browse, buy, and sell directly between artist and collector", teal: true  },
-  ];
-
   return (
     <section style={{
+      background: `linear-gradient(160deg, #faf8ff 0%, #ede9fe 55%, #f0fdfa 100%)`,
+      padding: "clamp(80px,10vw,124px) clamp(20px,5vw,48px)",
       position: "relative", overflow: "hidden",
-      background: `linear-gradient(160deg, #faf8ff 0%, #ede9fe 45%, #f0f9ff 100%)`,
-      padding: "96px 24px",
     }}>
-      <div style={{ position: "absolute", top: -80, right: -80, width: 480, height: 480, borderRadius: "50%", background: `radial-gradient(circle, #ede9fe 0%, transparent 70%)`, pointerEvents: "none" }} />
+      <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "clamp(48px,7vw,96px)", alignItems: "center" }}>
 
-      <div style={{ position: "relative", maxWidth: 1080, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 64, alignItems: "center" }}>
-        <div>
-          <Badge teal>Artist First</Badge>
-          <h2 className="rg-h2" style={{ color: "#1a1a2e", margin: "20px 0 22px" }}>Built Around the Artist,<br />Not the Institution</h2>
-          <p className="rg-body" style={{ color: "#374151", marginBottom: 16 }}>
-            Professional tools, once reserved for elite galleries, now available to every artist.
-            A verified profile. A complete catalog. A direct path to art lovers who are looking
-            for exactly what you make.
-          </p>
-          <p className="rg-body" style={{ color: "#374151" }}>
-            Art discovery should not require a gallery introduction. Social discovery,
-            search, and recommendations mean your work finds its audience on its own merits.
-          </p>
-        </div>
+        {/* Phone mockup */}
+        <FadeIn>
+          <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          {pillars.map(p => (
-            <HoverCard key={p.label} style={{
-              background: "#fff", borderRadius: 18, padding: "24px 20px",
-              boxShadow: `0 2px 16px ${p.teal ? T : P}15`,
-              border: `1px solid ${p.teal ? "rgba(13,148,136,0.14)" : "rgba(124,58,237,0.14)"}`,
-            }}>
-              <div className="rg-h3" style={{ color: p.teal ? T2 : P, marginBottom: 8, fontSize: "0.95rem" }}>{p.label}</div>
-              <div className="rg-small" style={{ color: "#6b7280" }}>{p.desc}</div>
-            </HoverCard>
-          ))}
-        </div>
+            {/* Phone device frame + Regestra UI */}
+            <div style={{ position: "relative", width: "100%", maxWidth: 320 }}>
+
+              {/* Outer phone shell */}
+              <div style={{
+                position: "relative",
+                background: "linear-gradient(160deg, #1a1a2e 0%, #16213e 100%)",
+                borderRadius: 44,
+                padding: "14px 10px",
+                boxShadow: `0 32px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.08), inset 0 0 0 1px rgba(255,255,255,0.04)`,
+              }}>
+                {/* Side buttons */}
+                <div style={{ position: "absolute", left: -3, top: 90, width: 3, height: 32, background: "#2a2a3e", borderRadius: "2px 0 0 2px" }} />
+                <div style={{ position: "absolute", left: -3, top: 132, width: 3, height: 54, background: "#2a2a3e", borderRadius: "2px 0 0 2px" }} />
+                <div style={{ position: "absolute", right: -3, top: 110, width: 3, height: 54, background: "#2a2a3e", borderRadius: "0 2px 2px 0" }} />
+
+                {/* Screen bezel */}
+                <div style={{
+                  background: "#fff",
+                  borderRadius: 34,
+                  overflow: "hidden",
+                  position: "relative",
+                }}>
+                  {/* Status bar */}
+                  <div style={{ background: "#7c3aed", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 16px 4px" }}>
+                    <span style={{ fontSize: 8, fontWeight: 700, color: "#fff" }}>9:41</span>
+                    <div style={{ width: 60, height: 10, background: "rgba(0,0,0,0.3)", borderRadius: 99, margin: "0 auto" }} />
+                    <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                      <div style={{ width: 10, height: 6, border: "1px solid rgba(255,255,255,0.8)", borderRadius: 1, position: "relative" }}>
+                        <div style={{ position: "absolute", inset: "1px 2px 1px 1px", background: "#fff", borderRadius: 1 }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* App header */}
+                  <div style={{ background: "linear-gradient(160deg, #7c3aed 0%, #6d28d9 50%, #0d9488 100%)", padding: "10px 14px 18px" }}>
+                    {/* Nav */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>regestra</span>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <div style={{ width: 18, height: 18, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(255,255,255,0.7)" }} />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Eyebrow */}
+                    <div style={{ fontSize: 8, fontWeight: 600, color: "rgba(255,255,255,0.65)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>Regestra Dev</div>
+                    {/* Title */}
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", marginBottom: 3, letterSpacing: "-0.02em" }}>Regestra Wallet</div>
+                    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.75)", marginBottom: 14, lineHeight: 1.4 }}>Your artwork certificates and ownership records</div>
+                    {/* Stat tiles */}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {[{ n: "24", l: "OWNED" }, { n: "26", l: "ISSUED" }].map(s => (
+                        <div key={s.l} style={{ flex: 1, background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
+                          <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{s.n}</div>
+                          <div style={{ fontSize: 7, color: "rgba(255,255,255,0.65)", letterSpacing: "0.1em", marginTop: 3 }}>{s.l}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tabs bar */}
+                  <div style={{ display: "flex", alignItems: "center", padding: "8px 12px 6px", borderBottom: "1px solid #f3e8ff", background: "#fff", gap: 6 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: "#7c3aed", background: "#f5f3ff", borderRadius: 99, padding: "4px 10px", border: "1px solid #ede9fe" }}>Owned 24</div>
+                    <div style={{ fontSize: 9, fontWeight: 500, color: "#9ca3af", padding: "4px 6px" }}>Issued 26</div>
+                    <div style={{ marginLeft: "auto", fontSize: 9, color: "#7c3aed", fontWeight: 600 }}>Explorer →</div>
+                  </div>
+
+                  {/* Certificate card */}
+                  <div style={{ padding: "10px 12px 14px", background: "#fff" }}>
+                    <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #ede9fe", position: "relative", boxShadow: "0 2px 12px rgba(124,58,237,0.08)" }}>
+                      <Photo
+                        src="https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?auto=format&w=400&q=80"
+                        alt="Certificate artwork"
+                        style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }}
+                      />
+                      {/* Verified badge */}
+                      <div style={{ position: "absolute", top: 7, right: 7, background: "rgba(13,148,136,0.93)", borderRadius: 99, padding: "3px 8px", display: "flex", alignItems: "center", gap: 4, backdropFilter: "blur(4px)" }}>
+                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#99f6e4" }} />
+                        <span style={{ fontSize: 7, fontWeight: 700, color: "#fff", letterSpacing: "0.04em" }}>Verified</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating verified badge */}
+              <div style={{
+                position: "absolute", bottom: -18, right: -20,
+                background: "#fff", borderRadius: 16, padding: "14px 18px",
+                boxShadow: `0 8px 32px ${P}28`,
+                display: "flex", alignItems: "center", gap: 10,
+              }}>
+                <div style={{ width: 42, height: 42, borderRadius: 10, background: `linear-gradient(135deg, ${P}, ${T})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Award style={{ width: 21, height: 21, color: "#fff" }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#1a1a2e" }}>Verified Artist</div>
+                  <div style={{ fontSize: "0.72rem", color: "#9ca3af", fontWeight: 500 }}>Certified by Regestra</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </FadeIn>
+
+        {/* Text */}
+        <FadeIn delay={110}>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: P, marginBottom: 18 }}>Artist First</p>
+            <h2 style={{ fontSize: "clamp(1.9rem, 4vw, 3.1rem)", fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1.05, color: "#1a1a2e", margin: "0 0 20px", hyphens: "none" }}>
+              Built for the Artist.<br />Not the Institution.
+            </h2>
+            <p style={{ fontSize: "1rem", color: "#1a1a2e", lineHeight: 1.8, marginBottom: 14, fontWeight: 500, hyphens: "none" }}>
+              The tools that once lived behind gallery doors are finally yours. A verified profile, a beautiful catalog, and a direct line to collectors who are already looking for exactly what you make.
+            </p>
+            <p style={{ fontSize: "1rem", color: "#374151", lineHeight: 1.8, marginBottom: 32, hyphens: "none" }}>
+              Your work deserves to be found on its own terms. Not because you knew the right person in the right room.
+            </p>
+            {/* 2x2 feature bullets */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px", marginBottom: 36 }}>
+              {["Artist Portfolios", "Social Discovery", "Direct Messaging", "Marketplace"].map((item, i) => (
+                <div key={item} style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <div style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", background: i % 2 === 0 ? LP : LT, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Check style={{ width: 11, height: 11, color: i % 2 === 0 ? P : T }} />
+                  </div>
+                  <span style={{ fontSize: "0.88rem", fontWeight: 600, color: "#1a1a2e" }}>{item}</span>
+                </div>
+              ))}
+            </div>
+            <Link to="/sign-up" style={{ textDecoration: "none" }}>
+              <button style={{
+                display: "inline-flex", alignItems: "center", gap: 8, padding: "13px 28px",
+                borderRadius: 999, fontSize: "0.9rem", fontWeight: 800,
+                background: `linear-gradient(135deg, ${P}, ${T})`, color: "#fff",
+                border: "none", cursor: "pointer", boxShadow: `0 6px 24px ${P}40`,
+                transition: "transform 0.18s",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ""; }}
+              >
+                Create Your Portfolio <ArrowRight style={{ width: 15, height: 15 }} />
+              </button>
+            </Link>
+          </div>
+        </FadeIn>
       </div>
     </section>
   );
 }
 
-/* ── 4. HOW IT WORKS  ── teal tinted ─────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════
+   5. GALLERY STRIP — full-bleed photo + collector message
+══════════════════════════════════════════════════════════════════ */
+function GalleryStrip() {
+  return (
+    <section style={{ background: "#fff", overflow: "hidden" }}>
+      {/* Full-width photo with overlay text — uses padding instead of fixed height so content never clips on mobile */}
+      <div style={{ position: "relative" }}>
+        <Photo src={IMG.gallery} alt="Art gallery" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 40%" }} />
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg, ${P2}e0 0%, ${P}b0 50%, transparent 100%)` }} />
+        {/* Content uses padding so it always has room — no clipping */}
+        <div style={{ position: "relative", padding: "clamp(48px,8vw,80px) clamp(24px,6vw,80px)", maxWidth: 640 }}>
+          <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", marginBottom: 14 }}>For Collectors</p>
+          <h2 style={{ fontSize: "clamp(1.7rem, 4vw, 3.2rem)", fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1.05, color: "#fff", margin: "0 0 16px", hyphens: "none" }}>
+            Discover art you will love<br />before anyone else does.
+          </h2>
+          <p style={{ fontSize: "0.98rem", color: "rgba(255,255,255,0.92)", lineHeight: 1.78, marginBottom: 28, maxWidth: 380, fontWeight: 500, hyphens: "none" }}>
+            Follow the artists you believe in, save the works that stay with you, and reach out whenever you're ready. No intermediaries, no hidden premiums.
+          </p>
+          <Link to="/gallery" style={{ textDecoration: "none", display: "inline-block" }}>
+            <button style={{
+              display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px",
+              borderRadius: 999, fontSize: "0.9rem", fontWeight: 800,
+              background: "#fff", color: P2, border: "none", cursor: "pointer",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.2)", transition: "transform 0.18s",
+              marginBottom: "clamp(40px,7vw,72px)",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ""; }}
+            >
+              Explore the Gallery <ArrowRight style={{ width: 15, height: 15 }} />
+            </button>
+          </Link>
+        </div>
+      </div>
+      {/* 3-thumbnail strip */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", height: "clamp(100px,15vw,200px)" }}>
+        {[IMG.collector, IMG.galleryWall, IMG.handsDetail].map((src, i) => (
+          <div key={i} style={{ overflow: "hidden", position: "relative" }}>
+            <Photo src={src} alt="Art detail" style={{
+              width: "100%", height: "100%", objectFit: "cover", display: "block",
+              transition: "transform 0.5s",
+            }}
+              onMouseEnter={(e: React.MouseEvent<HTMLImageElement>) => { e.currentTarget.style.transform = "scale(1.05)"; }}
+              onMouseLeave={(e: React.MouseEvent<HTMLImageElement>) => { e.currentTarget.style.transform = "scale(1)"; }}
+            />
+            <div style={{ position: "absolute", inset: 0, background: `${P}18` }} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   6. HOW IT WORKS — equal-height step cards
+══════════════════════════════════════════════════════════════════ */
 function HowItWorks() {
   const steps = [
-    { num: "01", icon: <Upload style={{ width: 22, height: 22, color: "#fff" }} />, title: "Create or Collect", body: "Artists upload their work to build a living portfolio. Art lovers follow creators and save works they love." },
-    { num: "02", icon: <Grid   style={{ width: 22, height: 22, color: "#fff" }} />, title: "Build Your Profile", body: "Artists curate their gallery their way. Art lovers build a collection that reflects their taste and eye." },
-    { num: "03", icon: <Search style={{ width: 22, height: 22, color: "#fff" }} />, title: "Discover & Connect",  body: "Explore emerging and established artists, follow the ones that move you, and connect with a global creative community." },
-    { num: "04", icon: <Globe  style={{ width: 22, height: 22, color: "#fff" }} />, title: "Buy, Sell, Connect",  body: "Artists list work in the Marketplace and connect directly with buyers. Art lovers find pieces they love and reach out to the artist personally." },
+    { num: "01", title: "Create or Collect",    body: "Upload your work and build a portfolio that grows as you do. Or begin following the artists whose work quietly stops you in your tracks." },
+    { num: "02", title: "Build Your Profile",   body: "Artists shape their own space. Collectors build a personal collection that feels like a reflection of who they are." },
+    { num: "03", title: "Discover and Connect", body: "Find artists you never would have come across otherwise. Follow the ones that genuinely move you. Reach out. This is what an art community can feel like." },
+    { num: "04", title: "Buy, Sell, Connect",   body: "See something you need to own? Message the artist directly. No intermediaries, no added cost. Just a real conversation between two people who love what art can do." },
   ];
 
   return (
     <section style={{
+      background: `linear-gradient(155deg, #f0fdfa 0%, #ede9fe 50%, #f8f5ff 100%)`,
+      padding: "clamp(80px,10vw,116px) clamp(20px,5vw,48px)",
       position: "relative", overflow: "hidden",
-      background: `linear-gradient(155deg, #f0fdfa 0%, #ccfbf1 35%, #e0f2fe 100%)`,
-      padding: "96px 24px",
     }}>
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
-        backgroundImage: `linear-gradient(${T}15 1px, transparent 1px), linear-gradient(90deg, ${T}15 1px, transparent 1px)`,
-        backgroundSize: "48px 48px",
-      }} />
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
-        backgroundImage: `radial-gradient(ellipse at 15% 50%, ${T}18 0%, transparent 50%), radial-gradient(ellipse at 85% 30%, ${P}0f 0%, transparent 50%)`,
-      }} />
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: `linear-gradient(${T}10 1px, transparent 1px), linear-gradient(90deg, ${T}10 1px, transparent 1px)`, backgroundSize: "48px 48px" }} />
 
-      <div style={{ position: "relative", maxWidth: 1080, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 60 }}>
-          <h2 className="rg-h2" style={{ color: "#134e4a", marginBottom: 16 }}>How It Works</h2>
-          <p className="rg-body-lg" style={{ color: "#0f766e", maxWidth: 460, margin: "0 auto" }}>
-            From your first upload to a global audience. Four simple steps.
-          </p>
-        </div>
+      <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative" }}>
+        <FadeIn>
+          <div style={{ textAlign: "center", marginBottom: "clamp(44px,5vw,68px)" }}>
+            <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: T, marginBottom: 14 }}>How It Works</p>
+            <h2 style={{ fontSize: "clamp(2rem, 4.5vw, 3.4rem)", fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1.05, color: "#134e4a", margin: 0, hyphens: "none" }}>
+              From your first upload<br />to a global audience.
+            </h2>
+          </div>
+        </FadeIn>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 18, alignItems: "stretch" }}>
           {steps.map((s, i) => (
-            <HoverCard key={s.num} style={{
-              background: "rgba(255,255,255,0.92)", borderRadius: 20, padding: "36px 26px",
-              position: "relative", backdropFilter: "blur(4px)",
-              boxShadow: "0 4px 24px rgba(13,148,136,0.1)",
-              border: "1px solid rgba(13,148,136,0.14)",
-            }}>
-              <div style={{ position: "absolute", top: 16, right: 20, fontSize: "3rem", fontWeight: 900, lineHeight: 1, color: i < 2 ? `${T}1a` : `${P}1a`, userSelect: "none" }}>{s.num}</div>
-              <div style={{ width: 52, height: 52, borderRadius: 14, marginBottom: 20, background: `linear-gradient(135deg, ${T}, ${T2})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 6px 18px ${T}40` }}>{s.icon}</div>
-              <div style={{ width: 32, height: 3, borderRadius: 2, marginBottom: 16, background: `linear-gradient(90deg, ${T}, ${P})` }} />
-              <h3 className="rg-h3" style={{ color: "#134e4a", marginBottom: 10, fontSize: "1rem" }}>{s.title}</h3>
-              <p className="rg-body" style={{ color: "#374151" }}>{s.body}</p>
-            </HoverCard>
+            <FadeIn key={s.num} delay={i * 80} style={{ display: "flex" }}>
+              <div style={{
+                flex: 1,
+                background: "rgba(255,255,255,0.94)", borderRadius: 22,
+                padding: "clamp(24px,3vw,36px) clamp(20px,2.5vw,28px)",
+                boxShadow: "0 4px 22px rgba(13,148,136,0.1)",
+                border: "1px solid rgba(13,148,136,0.1)",
+                display: "flex", flexDirection: "column",
+                transition: "transform 0.2s, box-shadow 0.2s",
+                position: "relative", overflow: "hidden",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-5px)"; e.currentTarget.style.boxShadow = "0 16px 44px rgba(13,148,136,0.18)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 4px 22px rgba(13,148,136,0.1)"; }}
+              >
+                {/* Ghost number */}
+                <div style={{ position: "absolute", top: 12, right: 16, fontSize: "3.6rem", fontWeight: 900, lineHeight: 1, color: i % 2 === 0 ? `${P}0d` : `${T}0f`, userSelect: "none", letterSpacing: "-0.04em" }}>{s.num}</div>
+                {/* Step badge */}
+                <div style={{ width: 50, height: 50, borderRadius: 14, marginBottom: 18, background: `linear-gradient(135deg, ${i % 2 === 0 ? P : T}, ${i % 2 === 0 ? T : P2})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: `0 6px 18px ${i % 2 === 0 ? P : T}40` }}>
+                  <span style={{ fontSize: "1rem", fontWeight: 900, color: "#fff" }}>{s.num}</span>
+                </div>
+                <div style={{ width: 28, height: 3, borderRadius: 2, marginBottom: 14, background: `linear-gradient(90deg, ${i % 2 === 0 ? P : T}, transparent)` }} />
+                <h3 style={{ fontSize: "1.05rem", fontWeight: 800, letterSpacing: "-0.015em", color: "#134e4a", marginBottom: 10, hyphens: "none" }}>{s.title}</h3>
+                <p style={{ fontSize: "0.88rem", color: "#374151", lineHeight: 1.8, margin: 0, flexGrow: 1, hyphens: "none" }}>{s.body}</p>
+              </div>
+            </FadeIn>
           ))}
         </div>
       </div>
@@ -331,47 +607,21 @@ function HowItWorks() {
   );
 }
 
-/* ── 5. FEATURES TABS ────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════
+   7. FEATURES TABS — with real photos inside panel
+══════════════════════════════════════════════════════════════════ */
 const TABS = [
-  {
-    id: "portfolio", label: "Portfolio",
-    heading: "Share Your Work With the World",
-    body: "Artists get a living portfolio that builds itself as they upload. Art lovers get a curated profile that reflects every piece they've saved and collected.",
-    bullets: ["Auto-generated artist portfolio", "Art lover collection profiles", "Works organized by series or collection", "Optimized image display"],
-    color: P, bg: LP,
-  },
-  {
-    id: "discovery", label: "Discovery",
-    heading: "Discover Art That Moves You",
-    body: "Follow artists whose work resonates with you. Search by style or mood. No algorithm gatekeeping. Just art and the people who make it.",
-    bullets: ["Follow artists and get notified", "Personalised recommendations", "Search by style, medium, or keyword", "Trending and featured collections"],
-    color: T, bg: LT,
-  },
-  {
-    id: "community", label: "Community",
-    heading: "A Community Built Around Art",
-    body: "Artists and art lovers connect through comments, direct messages, and a shared passion for authentic creative work — not algorithms.",
-    bullets: ["Direct messaging", "Comments and engagement", "Artist spotlights and features", "A global community"],
-    color: P, bg: LP,
-  },
-  {
-    id: "marketplace", label: "Marketplace",
-    heading: "Buy and Sell Without the Middleman",
-    body: "Artists list their work and collectors reach out directly. No auction house, no gallery cut. Just a conversation between the person who made it and the person who loves it.",
-    bullets: ["Artists list work in minutes", "Collectors browse and message directly", "No fees or middlemen", "On-platform checkout coming soon"],
-    color: T, bg: LT,
-  },
+  { id: "portfolio",   label: "Portfolio",   heading: "Your Work, Always Looking Its Best",       body: "Upload once and your portfolio takes shape around you. Artists get a home that does justice to their work. Collectors get a profile that feels genuinely theirs.",                                                                                                         bullets: ["Auto generated artist portfolio", "Art lover collection profiles", "Works organized by series", "Optimized image display"],                                           color: P, bg: LP, photo: 0 },
+  { id: "discovery",   label: "Discovery",   heading: "Find Art That Actually Stops You",          body: "No feed chasing trends. Just artists whose work resonates with you, easy to find and easy to stay close to.",                                                                                                                                                         bullets: ["Follow artists and get notified", "Personalized recommendations", "Search by style or medium", "Trending and featured collections"],                    color: T, bg: LT, photo: 1 },
+  { id: "community",   label: "Community",   heading: "A Real Community Around Art",               body: "Artists and collectors talk directly. Leave a comment, send a message, or simply follow someone whose work stays with you. Real people, real conversations.",                                                                                                                    bullets: ["Direct messaging", "Comments and engagement", "Artist spotlights", "A global community"],                                                           color: P, bg: LP, photo: 2 },
+  { id: "marketplace", label: "Marketplace", heading: "Buy and Sell, Person to Person",            body: "No auction house, no gallery commission. You find something you love, you reach out to the person who made it, and you take it from there.",                                                                                                                      bullets: ["List artwork in minutes", "Collectors message directly", "No fees or middlemen", "Integrated checkout coming soon"],                              color: T, bg: LT, photo: 3 },
 ];
-
-const ICONS: Record<string, React.ReactNode> = {
-  portfolio: <Palette style={{ width: 15, height: 15 }} />, discovery: <Compass style={{ width: 15, height: 15 }} />,
-  community: <MessageCircle style={{ width: 15, height: 15 }} />, marketplace: <TrendingUp style={{ width: 15, height: 15 }} />,
-};
-const LARGE_ICONS: Record<string, (c: string) => React.ReactNode> = {
-  portfolio: c => <Palette style={{ width: 72, height: 72, color: c }} />,
-  discovery: c => <Compass style={{ width: 72, height: 72, color: c }} />,
-  community: c => <MessageCircle style={{ width: 72, height: 72, color: c }} />,
-  marketplace: c => <TrendingUp style={{ width: 72, height: 72, color: c }} />,
+const PHOTOS_FOR_TAB = [IMG.studioDetail, IMG.galleryWall, IMG.collector, IMG.handsDetail];
+const TAB_ICONS: Record<string, React.ReactNode> = {
+  portfolio:   <Palette       style={{ width: 15, height: 15 }} />,
+  discovery:   <Compass       style={{ width: 15, height: 15 }} />,
+  community:   <MessageCircle style={{ width: 15, height: 15 }} />,
+  marketplace: <TrendingUp    style={{ width: 15, height: 15 }} />,
 };
 
 function FeaturesTabbed() {
@@ -379,39 +629,50 @@ function FeaturesTabbed() {
   const tab = TABS[active];
 
   return (
-    <section style={{ position: "relative", overflow: "hidden", background: `linear-gradient(160deg, #faf8ff 0%, #f3e8ff 50%, #faf8ff 100%)`, padding: "96px 24px" }}>
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: `radial-gradient(ellipse at 90% 20%, ${P}18 0%, transparent 50%), radial-gradient(ellipse at 10% 80%, ${T}10 0%, transparent 50%)` }} />
-
-      <div style={{ position: "relative", maxWidth: 1080, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <h2 className="rg-h2" style={{ color: "#1a1a2e", marginBottom: 16 }}>Everything You Need</h2>
-          <p className="rg-body-lg" style={{ color: "#4b5563", maxWidth: 460, margin: "0 auto" }}>Professional tools for artists and art lovers, all in one place.</p>
-        </div>
-
-        <div role="tablist" style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 40, flexWrap: "wrap" }}>
-          {TABS.map((t, i) => (
-            <button key={t.id} role="tab" aria-selected={i === active} aria-controls={`tp-${t.id}`} id={`tb-${t.id}`} onClick={() => setActive(i)}
-              style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 22px", borderRadius: 999, border: i === active ? `2px solid ${t.color}` : "2px solid transparent", background: i === active ? t.bg : "#fff", color: i === active ? t.color : "#6b7280", fontWeight: i === active ? 700 : 500, fontSize: "0.88rem", cursor: "pointer", transition: "all 0.2s", outline: "none", boxShadow: i === active ? `0 2px 12px ${t.color}22` : "0 1px 4px rgba(0,0,0,0.06)" }}
-              onFocus={e => { e.currentTarget.style.boxShadow = `0 0 0 3px ${t.color}33`; }}
-              onBlur={e => { e.currentTarget.style.boxShadow = i === active ? `0 2px 12px ${t.color}22` : "0 1px 4px rgba(0,0,0,0.06)"; }}
-            >
-              {ICONS[t.id]}{t.label}
-            </button>
-          ))}
-        </div>
-
-        <div id={`tp-${tab.id}`} role="tabpanel" aria-labelledby={`tb-${tab.id}`}
-          style={{ background: "#fff", borderRadius: 24, padding: "48px 44px", border: `1px solid ${tab.color}28`, boxShadow: `0 8px 48px ${tab.color}18`, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 48, alignItems: "center" }}
-        >
-          <div>
-            <div style={{ width: 60, height: 60, borderRadius: 16, marginBottom: 24, background: tab.color === P ? `linear-gradient(135deg, ${P}, ${P2})` : `linear-gradient(135deg, ${T}, ${T2})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 6px 20px ${tab.color}40` }}>
-              {React.cloneElement(ICONS[tab.id] as React.ReactElement<any>, { style: { width: 22, height: 22, color: "#fff" } })}
+    <section style={{ background: `linear-gradient(160deg, #faf8ff 0%, #f3e8ff 50%, #faf8ff 100%)`, padding: "clamp(80px,10vw,116px) clamp(20px,5vw,48px)", position: "relative", overflow: "hidden" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <FadeIn>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 40, flexWrap: "wrap", gap: 20 }}>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: P, marginBottom: 12 }}>Features</p>
+              <h2 style={{ fontSize: "clamp(1.9rem,4vw,3.1rem)", fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1.05, color: "#1a1a2e", margin: 0, hyphens: "none" }}>Everything You Need</h2>
             </div>
-            <h3 className="rg-h3" style={{ color: "#1a1a2e", marginBottom: 16, fontSize: "1.3rem" }}>{tab.heading}</h3>
-            <p className="rg-body" style={{ color: "#374151", marginBottom: 28 }}>{tab.body}</p>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div role="tablist" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {TABS.map((t, i) => (
+                <button key={t.id} role="tab" aria-selected={i === active} onClick={() => setActive(i)} style={{
+                  display: "flex", alignItems: "center", gap: 6, padding: "9px 18px",
+                  borderRadius: 999, outline: "none", cursor: "pointer",
+                  border: i === active ? `2px solid ${t.color}` : "2px solid transparent",
+                  background: i === active ? t.bg : "rgba(255,255,255,0.75)",
+                  color: i === active ? t.color : "#6b7280",
+                  fontWeight: i === active ? 800 : 500, fontSize: "0.84rem",
+                  transition: "all 0.18s",
+                  boxShadow: i === active ? `0 2px 10px ${t.color}22` : "none",
+                }}>{TAB_ICONS[t.id]}&nbsp;{t.label}</button>
+              ))}
+            </div>
+          </div>
+        </FadeIn>
+
+        <div style={{
+          background: "#fff", borderRadius: 26,
+          padding: "clamp(28px,4.5vw,48px)",
+          border: `1.5px solid ${tab.color}20`,
+          boxShadow: `0 10px 52px ${tab.color}10`,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: "clamp(28px,4vw,48px)",
+          alignItems: "center",
+        }}>
+          <div>
+            <div style={{ width: 58, height: 58, borderRadius: 16, marginBottom: 22, background: tab.color === P ? `linear-gradient(135deg,${P},${P2})` : `linear-gradient(135deg,${T},${T2})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 6px 22px ${tab.color}44` }}>
+              {React.cloneElement(TAB_ICONS[tab.id] as React.ReactElement<any>, { style: { width: 23, height: 23, color: "#fff" } })}
+            </div>
+            <h3 style={{ fontSize: "clamp(1.15rem,2.5vw,1.65rem)", fontWeight: 900, letterSpacing: "-0.025em", color: "#1a1a2e", marginBottom: 12, hyphens: "none" }}>{tab.heading}</h3>
+            <p style={{ fontSize: "0.93rem", color: "#374151", lineHeight: 1.82, marginBottom: 26, hyphens: "none" }}>{tab.body}</p>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
               {tab.bullets.map(b => (
-                <li key={b} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: "0.9rem", fontWeight: 500, color: "#374151" }}>
+                <li key={b} style={{ display: "flex", alignItems: "flex-start", gap: 11, fontSize: "0.9rem", fontWeight: 500, color: "#374151", hyphens: "none" }}>
                   <div style={{ flexShrink: 0, marginTop: 2, width: 20, height: 20, borderRadius: "50%", background: tab.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Check style={{ width: 11, height: 11, color: tab.color }} />
                   </div>
@@ -420,12 +681,13 @@ function FeaturesTabbed() {
               ))}
             </ul>
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 220 }}>
-            <div style={{ position: "relative", width: 220, height: 220 }}>
-              <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `2px solid ${tab.color}20`, background: `radial-gradient(circle at 35% 35%, ${tab.bg} 0%, white 65%)`, boxShadow: `0 0 80px ${tab.color}1a` }} />
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.35 }}>{LARGE_ICONS[tab.id](tab.color)}</div>
-              <div style={{ position: "absolute", top: -6, right: -6, width: 36, height: 36, borderRadius: "50%", background: `linear-gradient(135deg, ${tab.color}, ${tab.color === P ? T : P})`, opacity: 0.7 }} />
-            </div>
+          {/* Photo changes per tab */}
+          <div style={{ borderRadius: 18, overflow: "hidden", boxShadow: `0 8px 36px ${tab.color}18` }}>
+            <Photo
+              src={PHOTOS_FOR_TAB[active]}
+              alt={tab.heading}
+              style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", display: "block" }}
+            />
           </div>
         </div>
       </div>
@@ -433,50 +695,68 @@ function FeaturesTabbed() {
   );
 }
 
-/* ── 6. TIMELINE  ── dark purple, frosted cards ──────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════
+   8. ROADMAP — purple gradient, equal-height cards
+══════════════════════════════════════════════════════════════════ */
 const TIMELINE = [
-  { teal: true,  label: "Live Now",    title: "Artist Portfolios",              body: "Upload, organize, and share your entire body of work. The professional home your art deserves." },
-  { teal: true,  label: "Live Now",    title: "Social Discovery",               body: "Art lovers explore and follow. Artists get found. A discovery engine built around genuine taste, not trending tags." },
-  { teal: true,  label: "Live Now",    title: "Direct Messaging",               body: "Collectors reach out to artists. Artists connect with buyers. Real conversations between real people." },
-  { teal: true,  label: "Live Now",    title: "Marketplace",                    body: "Artists list their work for sale. Collectors browse and buy directly. No middlemen, no markup, just art changing hands." },
-  { teal: false, label: "Coming Soon", title: "Authentication Layer",            body: "A verification layer linking each artwork to its creator, producing a permanent trustworthy record of authorship and provenance." },
-  { teal: false, label: "Coming Soon", title: "Certificates of Authentication", body: "Artists will issue official digital Certificates of Authentication, giving art lovers documented confidence in every piece they acquire." },
+  { teal: true,  label: "Live Now",    title: "Artist Portfolios",            body: "Upload, organize, and present your work the way it deserves to be seen. A professional home that is entirely yours." },
+  { teal: true,  label: "Live Now",    title: "Social Discovery",             body: "Discover artists you would never have come across otherwise. Follow the ones that stay with you. Get found by people who genuinely care." },
+  { teal: true,  label: "Live Now",    title: "Direct Messaging",             body: "Reach out to artists. Connect with collectors. Honest conversations with no platform standing between you." },
+  { teal: true,  label: "Live Now",    title: "Marketplace",                  body: "List your work, browse and buy, connect with buyers directly. No fees, no markups, no waiting for someone else's approval." },
+  { teal: true,  label: "Live Now",    title: "Authentication Layer",          body: "A permanent record that connects every piece to its creator. Provenance you can point to with confidence." },
+  { teal: true,  label: "Live Now",    title: "Certificates of Authenticity", body: "Artists issue a verified digital certificate with every sale. Collectors know exactly what they own and where it came from." },
 ];
 
-function ComingSoon() {
+function Roadmap() {
   return (
-    <section style={{ position: "relative", overflow: "hidden", background: `linear-gradient(150deg, #1e1b4b 0%, ${P3} 40%, #1e3a5f 100%)`, padding: "96px 24px", color: "#fff" }}>
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: `radial-gradient(ellipse at 85% 15%, ${T}22 0%, transparent 50%), radial-gradient(ellipse at 10% 75%, ${P}30 0%, transparent 50%)` }} />
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: "radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
+    <section style={{
+      background: `linear-gradient(150deg, ${P3} 0%, ${P2} 45%, #1e3a5f 100%)`,
+      padding: "clamp(80px,10vw,116px) clamp(20px,5vw,48px)",
+      position: "relative", overflow: "hidden",
+    }}>
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: `radial-gradient(ellipse at 85% 15%, ${T}22 0%, transparent 50%)` }} />
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: "radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
 
-      <div style={{ position: "relative", maxWidth: 760, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 60 }}>
-          <h2 className="rg-h2 rg-hero-glow-dark" style={{ color: "#fff", marginBottom: 16 }}>What We Are <span className="rg-grad-text-teal">Building</span></h2>
-          <p className="rg-body-lg" style={{ color: "rgba(255,255,255,0.72)", maxWidth: 460, margin: "0 auto" }}>Live today, and what is on the horizon.</p>
-        </div>
+      <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative" }}>
+        <FadeIn>
+          <div style={{ textAlign: "center", marginBottom: "clamp(44px,6vw,68px)" }}>
+            <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.6)", marginBottom: 14 }}>Roadmap</p>
+            <h2 style={{ fontSize: "clamp(2rem,4.5vw,3.4rem)", fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1.05, color: "#fff", margin: 0, hyphens: "none" }}>
+              What We Are{" "}
+              <span style={{ background: "linear-gradient(90deg,#99f6e4,#c4b5fd)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>Building</span>
+            </h2>
+          </div>
+        </FadeIn>
 
-        <div style={{ position: "relative", paddingLeft: 40 }}>
-          <div style={{ position: "absolute", left: 14, top: 0, bottom: 0, width: 2, background: `linear-gradient(180deg, ${T} 0%, ${T}99 50%, ${P}99 70%, ${P} 100%)`, borderRadius: 2 }} />
-
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 14, alignItems: "stretch" }}>
           {TIMELINE.map((item, i) => (
-            <div key={item.title} style={{ position: "relative", marginBottom: i < TIMELINE.length - 1 ? 24 : 0 }}>
-              <div style={{ position: "absolute", left: -33, top: 22, width: 24, height: 24, borderRadius: "50%", zIndex: 1, background: item.teal ? T : "rgba(255,255,255,0.08)", border: `2px solid ${item.teal ? T : P}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 12px ${item.teal ? T : P}66` }}>
-                {item.teal ? <Check style={{ width: 11, height: 11, color: "#fff" }} /> : <div style={{ width: 8, height: 8, borderRadius: "50%", background: P }} />}
-              </div>
-
-              <div
-                style={{ background: "rgba(255,255,255,0.07)", backdropFilter: "blur(12px)", borderRadius: 16, padding: "22px 26px", border: `1px solid ${item.teal ? T : P}30`, transition: "transform 0.2s, background 0.2s, box-shadow 0.2s" }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateX(6px)"; e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.boxShadow = `0 8px 32px ${item.teal ? T : P}28`; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "translateX(0)"; e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.boxShadow = "none"; }}
+            <FadeIn key={item.title} delay={i * 55} style={{ display: "flex" }}>
+              <div style={{
+                flex: 1,
+                background: "rgba(255,255,255,0.08)", backdropFilter: "blur(12px)",
+                borderRadius: 20, padding: "24px 26px",
+                border: `1px solid ${item.teal ? T : P}35`,
+                display: "flex", flexDirection: "column",
+                transition: "background 0.2s, transform 0.2s",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.14)"; e.currentTarget.style.transform = "translateY(-3px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.transform = ""; }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <span style={{ display: "inline-block", background: item.teal ? "rgba(13,148,136,0.25)" : "rgba(124,58,237,0.25)", color: item.teal ? "#5eead4" : "#c4b5fd", border: `1px solid ${item.teal ? "rgba(94,234,212,0.3)" : "rgba(196,181,253,0.3)"}`, borderRadius: 999, padding: "3px 12px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const }}>{item.label}</span>
-                  {!item.teal && <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#c4b5fd", fontWeight: 600 }}><Clock style={{ width: 11, height: 11 }} /> In Development</span>}
-                </div>
-                <h3 style={{ fontSize: "1.02rem", fontWeight: 800, letterSpacing: "-0.01em", color: "#fff", marginBottom: 6 }}>{item.title}</h3>
-                <p className="rg-body" style={{ color: "rgba(255,255,255,0.72)", margin: 0 }}>{item.body}</p>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 12, alignSelf: "flex-start",
+                  background: item.teal ? "rgba(13,148,136,0.25)" : "rgba(124,58,237,0.25)",
+                  color: item.teal ? "#5eead4" : "#c4b5fd",
+                  border: `1px solid ${item.teal ? "rgba(94,234,212,0.28)" : "rgba(196,181,253,0.28)"}`,
+                  borderRadius: 999, padding: "4px 12px",
+                  fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const,
+                }}>
+                  {item.teal ? <Check style={{ width: 10, height: 10 }} /> : <Clock style={{ width: 10, height: 10 }} />}
+                  {item.label}
+                </span>
+                <h3 style={{ fontSize: "1rem", fontWeight: 800, letterSpacing: "-0.015em", color: "#fff", marginBottom: 8, hyphens: "none" }}>{item.title}</h3>
+                <p style={{ fontSize: "0.87rem", color: "rgba(255,255,255,0.82)", lineHeight: 1.78, margin: 0, flexGrow: 1, hyphens: "none" }}>{item.body}</p>
               </div>
-            </div>
+            </FadeIn>
           ))}
         </div>
       </div>
@@ -484,49 +764,38 @@ function ComingSoon() {
   );
 }
 
-/* ── 7. FAQ ───────────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════
+   9. FAQ
+══════════════════════════════════════════════════════════════════ */
 const FAQS = [
-  { q: "Is Regestra free to join?", a: "Yes. Creating an account, uploading artwork, and building your portfolio are all free. Advanced features are available as the platform grows." },
-  { q: "Who is Regestra for?", a: "Regestra is built for two audiences: artists at every career stage who want a professional home for their work, and art lovers who want a trusted place to discover, follow, and collect from creators they believe in." },
-  { q: "What is the Authentication Layer?", a: "A planned feature that will allow artists to formally register their work and produce a permanent trustworthy record of authorship. Currently in development." },
-  { q: "What are Certificates of Authentication?", a: "Official digital documents artists will be able to issue for their work, giving art lovers documented confidence in what they acquire. Coming soon." },
-  { q: "Can I sell my artwork on Regestra?", a: "Yes. The Marketplace is live now. List your artwork for sale and buyers can message you directly to arrange a purchase. On-platform checkout is coming soon." },
+  { q: "Is Regestra free to join?",               a: "Always. Creating your account, uploading work, and building a portfolio is completely free. More features are on the way as the platform evolves." },
+  { q: "Who is Regestra for?",                    a: "Artists at any point in their journey who want a genuine home for their work, and art lovers who want a better way to discover, follow, and collect from creators they believe in." },
+  { q: "What is the Authentication Layer?",       a: "A tool that lets artists formally register their work and create a permanent, verifiable record of authorship that anyone can look up." },
+  { q: "What are Certificates of Authenticity?", a: "Verified digital certificates issued by the artist at the point of sale. Collectors always know exactly what they own and can trace it back to its source." },
+  { q: "Can I sell my artwork on Regestra?",      a: "Yes, today. List your work in the Marketplace and interested buyers can reach out directly. Integrated checkout is coming soon." },
 ];
 
 function FAQ() {
   const [open, setOpen] = useState<number | null>(null);
-
   return (
-    <section style={{ position: "relative", overflow: "hidden", background: `linear-gradient(160deg, #faf8ff 0%, #ede9fe 45%, #f0f9ff 100%)`, padding: "96px 24px" }}>
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: `radial-gradient(ellipse at 85% 20%, ${P}14 0%, transparent 50%), radial-gradient(ellipse at 10% 80%, ${T}0c 0%, transparent 50%)` }} />
-
-      <div style={{ position: "relative", maxWidth: 780, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 52 }}>
-          <h2 className="rg-h2" style={{ color: "#1a1a2e", marginBottom: 14 }}>Common Questions</h2>
-          <p className="rg-body-lg" style={{ color: "#4b5563" }}>Everything you need to know about getting started.</p>
-        </div>
-
-        <div style={{ background: "#fff", borderRadius: 24, overflow: "hidden", boxShadow: "0 8px 48px rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.1)" }}>
+    <section style={{ background: `linear-gradient(160deg,#faf8ff 0%,#ede9fe 50%,#f0fdfa 100%)`, padding: "clamp(80px,10vw,116px) clamp(20px,5vw,48px)", position: "relative" }}>
+      <div style={{ maxWidth: 860, margin: "0 auto" }}>
+        <FadeIn>
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: P, marginBottom: 14 }}>FAQ</p>
+            <h2 style={{ fontSize: "clamp(2rem,4.5vw,3.2rem)", fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1.05, color: "#1a1a2e", margin: 0, hyphens: "none" }}>Common Questions</h2>
+          </div>
+        </FadeIn>
+        <div style={{ background: "#fff", borderRadius: 26, overflow: "hidden", boxShadow: `0 12px 52px ${P}0e`, border: `1.5px solid ${P}14` }}>
           {FAQS.map((faq, i) => {
             const isOpen = open === i;
             return (
               <div key={faq.q} style={{ borderBottom: i < FAQS.length - 1 ? "1px solid rgba(124,58,237,0.07)" : "none", background: isOpen ? LP : "transparent", transition: "background 0.2s" }}>
-                <button onClick={() => setOpen(isOpen ? null : i)} aria-expanded={isOpen} aria-controls={`faq-p-${i}`} id={`faq-b-${i}`}
-                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "22px 28px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left", gap: 16, outline: "none" }}
-                  onFocus={e => { e.currentTarget.style.boxShadow = `inset 0 0 0 2px ${P}33`; }}
-                  onBlur={e => { e.currentTarget.style.boxShadow = "none"; }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    <div style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, background: isOpen ? P : "#ede9fe", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }}>
-                      <Zap style={{ width: 13, height: 13, color: isOpen ? "#fff" : P }} />
-                    </div>
-                    <span style={{ fontSize: "0.97rem", fontWeight: 700, letterSpacing: "-0.01em", color: isOpen ? P : "#1a1a2e" }}>{faq.q}</span>
-                  </div>
-                  <ChevronDown style={{ width: 18, height: 18, color: isOpen ? P : "#9ca3af", flexShrink: 0, transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.24s ease" }} />
+                <button onClick={() => setOpen(isOpen ? null : i)} aria-expanded={isOpen} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 28px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left", gap: 16, outline: "none" }}>
+                  <span style={{ fontSize: "0.95rem", fontWeight: 700, letterSpacing: "-0.01em", color: isOpen ? P : "#1a1a2e", hyphens: "none" }}>{faq.q}</span>
+                  <ChevronDown style={{ width: 18, height: 18, color: isOpen ? P : "#9ca3af", flexShrink: 0, transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.22s" }} />
                 </button>
-                {isOpen && (
-                  <div id={`faq-p-${i}`} role="region" aria-labelledby={`faq-b-${i}`} style={{ padding: "0 28px 24px 70px", fontSize: "0.92rem", color: "#374151", lineHeight: 1.82 }}>{faq.a}</div>
-                )}
+                {isOpen && <div style={{ padding: "0 28px 22px", fontSize: "0.92rem", color: "#374151", lineHeight: 1.82, hyphens: "none" }}>{faq.a}</div>}
               </div>
             );
           })}
@@ -536,42 +805,101 @@ function FAQ() {
   );
 }
 
-/* ── 8. CTA ──────────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════
+   10. CTA — gallery wall photo + purple overlay
+══════════════════════════════════════════════════════════════════ */
 function CTA() {
   return (
-    <section style={{ position: "relative", overflow: "hidden", background: `linear-gradient(145deg, ${P3} 0%, ${P2} 30%, ${P} 65%, ${T} 100%)`, padding: "100px 24px", color: "#fff", textAlign: "center" }}>
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: `radial-gradient(ellipse at 20% 30%, ${T}28 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, ${P3}3a 0%, transparent 50%)` }} />
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+    <section style={{ position: "relative", overflow: "hidden", minHeight: 540, display: "flex", alignItems: "center" }}>
+      <Photo src={IMG.galleryWall} alt="Art gallery" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${P3}f2 0%, ${P2}de 38%, ${P}c0 68%, ${T}99 100%)` }} />
+      <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "28px 28px", pointerEvents: "none" }} />
 
-      <div style={{ position: "relative", maxWidth: 700, margin: "0 auto" }} className="lg:max-w-[860px]">
-        <h2 className="rg-h2 rg-hero-glow-dark" style={{ color: "#fff", marginBottom: 22 }}>Your Art Journey <span className="rg-grad-text-teal">Starts Here.</span></h2>
-        <p style={{ fontSize: "1.1rem", color: "rgba(255,255,255,0.85)", marginBottom: 44, lineHeight: 1.8 }} className="lg:whitespace-nowrap lg:tracking-[-0.01em]">Whether you're an artist ready to share your work or an art lover looking for your next favorite creator — Regestra was built for you.</p>
-        <Link to="/sign-up">
-          <Button size="xl" variant="primary-light" style={{ borderRadius: 999, fontWeight: 800, boxShadow: "0 8px 40px rgba(0,0,0,0.28)", fontSize: "1rem", padding: "16px 40px" }}>
-            Get Started Free
-            <ArrowRight style={{ marginLeft: 10, width: 18, height: 18 }} />
-          </Button>
-        </Link>
+      <div style={{ position: "relative", maxWidth: 800, margin: "0 auto", padding: "clamp(96px,12vw,140px) clamp(20px,5vw,48px)", textAlign: "center", color: "#fff" }}>
+        <FadeIn>
+          <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.65)", marginBottom: 22 }}>Join Regestra</p>
+          <h2 style={{ fontSize: "clamp(2.4rem, 6vw, 5rem)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 0.96, color: "#fff", margin: "0 0 24px", hyphens: "none" }}>
+            Your Art Journey<br />
+            <span style={{ background: "linear-gradient(100deg,#e9d5ff,#99f6e4)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Starts Here.
+            </span>
+          </h2>
+          <p style={{ fontSize: "clamp(0.96rem,1.8vw,1.1rem)", color: "rgba(255,255,255,0.88)", margin: "0 auto 44px", lineHeight: 1.8, maxWidth: 480, fontWeight: 500, hyphens: "none" }}>
+            Whether you make art or are drawn to it, this was built for you. Come and see what has been waiting.
+          </p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <Link to="/sign-up" style={{ textDecoration: "none" }}>
+              <button style={{
+                display: "inline-flex", alignItems: "center", gap: 10, padding: "16px 38px",
+                borderRadius: 999, fontSize: "1rem", fontWeight: 800,
+                background: "#fff", color: P2, border: "none", cursor: "pointer",
+                boxShadow: "0 8px 40px rgba(0,0,0,0.25)", transition: "transform 0.18s, box-shadow 0.18s",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 14px 52px rgba(0,0,0,0.3)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 8px 40px rgba(0,0,0,0.25)"; }}
+              >
+                Start for Free <ArrowRight style={{ width: 17, height: 17 }} />
+              </button>
+            </Link>
+            <Link to="/gallery" style={{ textDecoration: "none" }}>
+              <button style={{
+                display: "inline-flex", alignItems: "center", gap: 8, padding: "16px 30px",
+                borderRadius: 999, fontSize: "1rem", fontWeight: 700, color: "#fff",
+                background: "rgba(255,255,255,0.12)", border: "1.5px solid rgba(255,255,255,0.38)",
+                cursor: "pointer", transition: "background 0.18s",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.22)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
+              >
+                Explore the Gallery
+              </button>
+            </Link>
+          </div>
+        </FadeIn>
       </div>
     </section>
   );
 }
 
-/* ── PAGE ────────────────────────────────────────────────────────────────── */
+/* ── Global keyframes ─────────────────────────────────────────────── */
+function GlobalStyles() {
+  return (
+    <style>{`
+      @keyframes rg-word-pop {
+        0%   { opacity: 0; transform: translateY(7px) scale(0.95); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      /* Prevent browser hyphenation on all landing text */
+      .rg-landing * {
+        hyphens: none !important;
+        -webkit-hyphens: none !important;
+        overflow-wrap: normal;
+        word-break: normal;
+      }
+      /* Mobile — ensure grids stack gracefully */
+      @media (max-width: 640px) {
+        .rg-landing section { overflow-x: hidden; }
+      }
+    `}</style>
+  );
+}
+
+/* ── Page ─────────────────────────────────────────────────────────── */
 export default function Landing() {
   const { currentUser } = useUser();
-
-  /* Authenticated users see the social feed at "/" */
   if (currentUser) return <SocialFeed />;
 
   return (
-    <div style={{ overflowX: "hidden" }}>
+    <div className="rg-landing" style={{ overflowX: "hidden" }}>
+      <GlobalStyles />
       <Hero />
-      <ValueBand />
+      <IntroBand />
+      <ValueCards />
       <ArtistFirst />
+      <GalleryStrip />
       <HowItWorks />
       <FeaturesTabbed />
-      <ComingSoon />
+      <Roadmap />
       <FAQ />
       <CTA />
     </div>
