@@ -10,6 +10,7 @@ import { SocialPost, SocialComment, DEFAULT_AVATAR_URL } from '../data/mock';
 import { SearchComponent } from './Search';
 import { Input } from './ui/Input';
 import { recommendationService, RecommendedArtist } from '../services/recommendations';
+import ImageLightbox from './ImageLightbox';
 
 const getDomain = (url: string) => {
     if (!url) return 'ARTICLE';
@@ -95,6 +96,7 @@ export default function SocialFeed() {
   const [hiddenPosts, setHiddenPosts] = useState<SocialPost[]>([]);
   const [showHiddenSection, setShowHiddenSection] = useState(false);
   const [loadingHidden, setLoadingHidden] = useState(false);
+  const [lightbox, setLightbox] = useState<{ src: string; alt?: string } | null>(null);
 
   const metadataAbortController = useRef<AbortController | null>(null);
   const fetcherTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -751,7 +753,14 @@ SELECT 'Fix Applied! Now REFRESH your browser tab.' as status;`.trim();
                         )}
                     </div>
                 )}
-                {post.image && !hiddenPostIds.has(post.id) && <img src={post.image} alt="Post content" className="mt-4 rounded-xl border border-gray-100 w-full max-h-[550px] object-cover shadow-sm" />}
+                {post.image && !hiddenPostIds.has(post.id) && (
+                  <img
+                    src={post.image}
+                    alt="Post content"
+                    className="mt-4 rounded-xl border border-gray-100 w-full max-h-[550px] object-cover shadow-sm cursor-zoom-in hover:brightness-95 transition-all"
+                    onClick={() => setLightbox({ src: post.image!, alt: post.content || 'Artwork' })}
+                  />
+                )}
                 
                 {/* Article Preview — hidden when post is hidden */}
                 {!hiddenPostIds.has(post.id) && <ArticleCard post={post} />}
@@ -930,6 +939,17 @@ SELECT 'Fix Applied! Now REFRESH your browser tab.' as status;`.trim();
             <p className="text-sm font-medium">{toast.message}</p>
             <button onClick={() => setToast(null)} className="p-1 -mr-1 text-gray-400 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
           </div>
+        )}
+
+        {/* Full-screen image lightbox */}
+        {lightbox && (
+          <ImageLightbox
+            src={lightbox.src}
+            alt={lightbox.alt}
+            authorUsername={lightbox.authorUsername}
+            authorAvatar={lightbox.authorAvatar}
+            onClose={() => setLightbox(null)}
+          />
         )}
     </div>
   );
