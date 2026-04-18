@@ -74,7 +74,7 @@ function Photo({ src, alt, style = {} }: { src: string; alt: string; style?: Rea
    1. HERO
 ══════════════════════════════════════════════════════════════════ */
 function Hero() {
-  const words = ["Collectors.", "Galleries.", "Dreamers.", "Believers."];
+  const words = ["Art Lovers.", "Galleries.", "Dreamers.", "Believers."];
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 3800);
@@ -109,7 +109,7 @@ function Hero() {
           letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff",
         }}>
           <Sparkles style={{ width: 12, height: 12 }} />
-          For Artists &amp; Collectors
+          For Artists &amp; Art Lovers
         </span>
 
         {/* Headline */}
@@ -174,7 +174,7 @@ function Hero() {
               onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.22)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
             >
-              Browse as a Collector
+              Browse as an Art Lover
             </button>
           </Link>
         </div>
@@ -224,7 +224,7 @@ function IntroBand() {
                 </span>
               </h2>
               <p style={{ fontSize: "1rem", color: "#1a1a2e", lineHeight: 1.9, marginBottom: 14, fontWeight: 500, hyphens: "none" }}>
-                Regestra is where artists and art lovers find each other. Creators build a presence that lasts. Collectors discover work they genuinely fall for.
+                Regestra is where artists and art lovers find each other. Creators build a presence that lasts. Art lovers discover work they genuinely fall for.
               </p>
               <p style={{ fontSize: "1rem", color: "#374151", lineHeight: 1.9, hyphens: "none" }}>
                 No gatekeepers, no commission walls. Just the art and the people who are drawn to it.
@@ -263,10 +263,10 @@ function IntroBand() {
 ══════════════════════════════════════════════════════════════════ */
 function ValueCards() {
   const cards = [
-    { accent: P,  title: "Living Portfolios", body: "Your work, always current and beautifully presented. Artists get a portfolio worth sharing. Collectors get a personal feed that actually reflects their taste.", icon: <Palette style={{ width: 26, height: 26, color: "#fff" }} /> },
-    { accent: T,  title: "Real Connections",  body: "Follow the artists you love. Build an audience that genuinely cares. Talk to collectors and creators the way you would in person.", icon: <Users style={{ width: 26, height: 26, color: "#fff" }} /> },
+    { accent: P,  title: "Living Portfolios", body: "Your work, always current and beautifully presented. Artists get a portfolio worth sharing. Art lovers get a personal feed that actually reflects their taste.", icon: <Palette style={{ width: 26, height: 26, color: "#fff" }} /> },
+    { accent: T,  title: "Real Connections",  body: "Follow the artists you love. Build an audience that genuinely cares. Talk to art lovers and creators the way you would in person.", icon: <Users style={{ width: 26, height: 26, color: "#fff" }} /> },
     { accent: P,  title: "Direct Commerce",   body: "See something you love? Reach out directly. No auction house fees, no gallery overhead. Just you and the artist who created it.", icon: <ShoppingBag style={{ width: 26, height: 26, color: "#fff" }} /> },
-    { accent: T,  title: "Authenticated Art", body: "Every piece traces back to its creator. A verifiable record that gives collectors peace of mind and gives artists the recognition they deserve.", icon: <Award style={{ width: 26, height: 26, color: "#fff" }} /> },
+    { accent: T,  title: "Authenticated Art", body: "Every piece traces back to its creator. A verifiable record that gives art lovers peace of mind and gives artists the recognition they deserve.", icon: <Award style={{ width: 26, height: 26, color: "#fff" }} /> },
   ];
 
   return (
@@ -453,7 +453,7 @@ function ArtistFirst() {
               Built for the Artist.<br />Not the Institution.
             </h2>
             <p style={{ fontSize: "1rem", color: "#1a1a2e", lineHeight: 1.8, marginBottom: 14, fontWeight: 500, hyphens: "none" }}>
-              The tools that once lived behind gallery doors are finally yours. A verified profile, a beautiful catalog, and a direct line to collectors who are already looking for exactly what you make.
+              The tools that once lived behind gallery doors are finally yours. A verified profile, a beautiful catalog, and a direct line to art lovers who are already looking for exactly what you make.
             </p>
             <p style={{ fontSize: "1rem", color: "#374151", lineHeight: 1.8, marginBottom: 32, hyphens: "none" }}>
               Your work deserves to be found on its own terms. Not because you knew the right person in the right room.
@@ -502,7 +502,7 @@ function GalleryStrip() {
         <div style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg, ${P2}e0 0%, ${P}b0 50%, transparent 100%)` }} />
         {/* Content uses padding so it always has room — no clipping */}
         <div style={{ position: "relative", padding: "clamp(48px,8vw,80px) clamp(24px,6vw,80px)", maxWidth: 640 }}>
-          <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", marginBottom: 14 }}>For Collectors</p>
+          <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", marginBottom: 14 }}>For Art Lovers</p>
           <h2 style={{ fontSize: "clamp(1.7rem, 4vw, 3.2rem)", fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1.05, color: "#fff", margin: "0 0 16px", hyphens: "none" }}>
             Discover art you will love<br />before anyone else does.
           </h2>
@@ -550,7 +550,7 @@ function GalleryStrip() {
 function HowItWorks() {
   const steps = [
     { num: "01", title: "Create or Collect",    body: "Upload your work and build a portfolio that grows as you do. Or begin following the artists whose work quietly stops you in your tracks." },
-    { num: "02", title: "Build Your Profile",   body: "Artists shape their own space. Collectors build a personal collection that feels like a reflection of who they are." },
+    { num: "02", title: "Build Your Profile",   body: "Artists shape their own space. Art lovers build a personal collection that feels like a reflection of who they are." },
     { num: "03", title: "Discover and Connect", body: "Find artists you never would have come across otherwise. Follow the ones that genuinely move you. Reach out. This is what an art community can feel like." },
     { num: "04", title: "Buy, Sell, Connect",   body: "See something you need to own? Message the artist directly. No intermediaries, no added cost. Just a real conversation between two people who love what art can do." },
   ];
@@ -611,10 +611,10 @@ function HowItWorks() {
    7. FEATURES TABS — with real photos inside panel
 ══════════════════════════════════════════════════════════════════ */
 const TABS = [
-  { id: "portfolio",   label: "Portfolio",   heading: "Your Work, Always Looking Its Best",       body: "Upload once and your portfolio takes shape around you. Artists get a home that does justice to their work. Collectors get a profile that feels genuinely theirs.",                                                                                                         bullets: ["Auto generated artist portfolio", "Art lover collection profiles", "Works organized by series", "Optimized image display"],                                           color: P, bg: LP, photo: 0 },
+  { id: "portfolio",   label: "Portfolio",   heading: "Your Work, Always Looking Its Best",       body: "Upload once and your portfolio takes shape around you. Artists get a home that does justice to their work. Art lovers get a profile that feels genuinely theirs.",                                                                                                         bullets: ["Auto generated artist portfolio", "Art lover collection profiles", "Works organized by series", "Optimized image display"],                                           color: P, bg: LP, photo: 0 },
   { id: "discovery",   label: "Discovery",   heading: "Find Art That Actually Stops You",          body: "No feed chasing trends. Just artists whose work resonates with you, easy to find and easy to stay close to.",                                                                                                                                                         bullets: ["Follow artists and get notified", "Personalized recommendations", "Search by style or medium", "Trending and featured collections"],                    color: T, bg: LT, photo: 1 },
-  { id: "community",   label: "Community",   heading: "A Real Community Around Art",               body: "Artists and collectors talk directly. Leave a comment, send a message, or simply follow someone whose work stays with you. Real people, real conversations.",                                                                                                                    bullets: ["Direct messaging", "Comments and engagement", "Artist spotlights", "A global community"],                                                           color: P, bg: LP, photo: 2 },
-  { id: "marketplace", label: "Marketplace", heading: "Buy and Sell, Person to Person",            body: "No auction house, no gallery commission. You find something you love, you reach out to the person who made it, and you take it from there.",                                                                                                                      bullets: ["List artwork in minutes", "Collectors message directly", "No fees or middlemen", "Integrated checkout coming soon"],                              color: T, bg: LT, photo: 3 },
+  { id: "community",   label: "Community",   heading: "A Real Community Around Art",               body: "Artists and art lovers talk directly. Leave a comment, send a message, or simply follow someone whose work stays with you. Real people, real conversations.",                                                                                                                    bullets: ["Direct messaging", "Comments and engagement", "Artist spotlights", "A global community"],                                                           color: P, bg: LP, photo: 2 },
+  { id: "marketplace", label: "Marketplace", heading: "Buy and Sell, Person to Person",            body: "No auction house, no gallery commission. You find something you love, you reach out to the person who made it, and you take it from there.",                                                                                                                      bullets: ["List artwork in minutes", "Art lovers message directly", "No fees or middlemen", "Integrated checkout coming soon"],                              color: T, bg: LT, photo: 3 },
 ];
 const PHOTOS_FOR_TAB = [IMG.studioDetail, IMG.galleryWall, IMG.collector, IMG.handsDetail];
 const TAB_ICONS: Record<string, React.ReactNode> = {
@@ -701,10 +701,10 @@ function FeaturesTabbed() {
 const TIMELINE = [
   { teal: true,  label: "Live Now",    title: "Artist Portfolios",            body: "Upload, organize, and present your work the way it deserves to be seen. A professional home that is entirely yours." },
   { teal: true,  label: "Live Now",    title: "Social Discovery",             body: "Discover artists you would never have come across otherwise. Follow the ones that stay with you. Get found by people who genuinely care." },
-  { teal: true,  label: "Live Now",    title: "Direct Messaging",             body: "Reach out to artists. Connect with collectors. Honest conversations with no platform standing between you." },
+  { teal: true,  label: "Live Now",    title: "Direct Messaging",             body: "Reach out to artists. Connect with art lovers. Honest conversations with no platform standing between you." },
   { teal: true,  label: "Live Now",    title: "Marketplace",                  body: "List your work, browse and buy, connect with buyers directly. No fees, no markups, no waiting for someone else's approval." },
   { teal: true,  label: "Live Now",    title: "Authentication Layer",          body: "A permanent record that connects every piece to its creator. Provenance you can point to with confidence." },
-  { teal: true,  label: "Live Now",    title: "Certificates of Authenticity", body: "Artists issue a verified digital certificate with every sale. Collectors know exactly what they own and where it came from." },
+  { teal: true,  label: "Live Now",    title: "Certificates of Authenticity", body: "Artists issue a verified digital certificate with every sale. Art lovers know exactly what they own and where it came from." },
 ];
 
 function Roadmap() {
@@ -771,7 +771,7 @@ const FAQS = [
   { q: "Is Regestra free to join?",               a: "Always. Creating your account, uploading work, and building a portfolio is completely free. More features are on the way as the platform evolves." },
   { q: "Who is Regestra for?",                    a: "Artists at any point in their journey who want a genuine home for their work, and art lovers who want a better way to discover, follow, and collect from creators they believe in." },
   { q: "What is the Authentication Layer?",       a: "A tool that lets artists formally register their work and create a permanent, verifiable record of authorship that anyone can look up." },
-  { q: "What are Certificates of Authenticity?", a: "Verified digital certificates issued by the artist at the point of sale. Collectors always know exactly what they own and can trace it back to its source." },
+  { q: "What are Certificates of Authenticity?", a: "Verified digital certificates issued by the artist at the point of sale. Art lovers always know exactly what they own and can trace it back to its source." },
   { q: "Can I sell my artwork on Regestra?",      a: "Yes, today. List your work in the Marketplace and interested buyers can reach out directly. Integrated checkout is coming soon." },
 ];
 
