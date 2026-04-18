@@ -51,6 +51,14 @@ export default function Layout() {
     } catch {}
   }, []); // stable — currentUser accessed via ref
 
+  // Debounced refresh — prevents multiple rapid full-profile fetches when
+  // several follow/connect notifications arrive in quick succession
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => { refreshCurrentUser(); }, 5000);
+  }, [refreshCurrentUser]);
+
   useEffect(() => {
     let ch: any, mch: any;
     const cu = currentUserRef.current;
@@ -58,14 +66,14 @@ export default function Layout() {
       checkAllUnreadStatus();
       ch = supabase.channel(`public:notifications:${cu.id}`)
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${cu.id}` },
-          (p) => { setHasUnread(true); const n = p.new as any; if (n.type === "follow" || n.type === "connect_request") refreshCurrentUser(); })
+          (p) => { setHasUnread(true); const n = p.new as any; if (n.type === "follow" || n.type === "connect_request") debouncedRefresh(); })
         .subscribe();
       mch = supabase.channel(`public:messages_layout:${cu.id}`)
         .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => checkAllUnreadStatus())
         .subscribe();
     } else { setHasUnread(false); setHasUnreadMessages(false); }
     return () => { if (ch) supabase.removeChannel(ch); if (mch) supabase.removeChannel(mch); };
-  }, [currentUser?.id, checkAllUnreadStatus, refreshCurrentUser]); // currentUser?.id is a stable string — only changes on sign in/out
+  }, [currentUser?.id, checkAllUnreadStatus, debouncedRefresh]); // currentUser?.id is a stable string — only changes on sign in/out
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -97,9 +105,9 @@ export default function Layout() {
           style={{ borderBottom: "1px solid rgba(0,0,0,0.06)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-20">
               {/* Logo — not clickable to social feed */}
-              <span style={{ cursor: "default", display: "inline-flex" }}><Logo className="h-7 w-auto" /></span>
+              <span style={{ cursor: "default", display: "inline-flex" }}><Logo className="h-9 w-auto" /></span>
 
               {isLoading && !currentUser ? (
                 <div className="flex items-center justify-center w-40">
@@ -115,22 +123,22 @@ export default function Layout() {
                       {/* Home button — links to Social Posts feed */}
                       <Link to="/">
                         <Button variant="ghost" size="icon" className="rounded-full" title="Home">
-                          <Home className="w-5 h-5" />
+                          <Home className="w-6 h-6" />
                         </Button>
                       </Link>
-                      <Link to="/marketplace"><Button variant="ghost" size="icon" className="rounded-full"><ShoppingBag className="w-5 h-5" /></Button></Link>
-                      <Link to="/verify"><Button variant="ghost" size="icon" className="rounded-full" title="Verify Certificate"><Award className="w-5 h-5" /></Button></Link>
-                      <Link to="/upload"><Button variant="ghost" size="icon" className="rounded-full"><Upload className="w-5 h-5" /></Button></Link>
+                      <Link to="/marketplace"><Button variant="ghost" size="icon" className="rounded-full"><ShoppingBag className="w-6 h-6" /></Button></Link>
+                      <Link to="/verify"><Button variant="ghost" size="icon" className="rounded-full" title="Verify Certificate"><Award className="w-6 h-6" /></Button></Link>
+                      <Link to="/upload"><Button variant="ghost" size="icon" className="rounded-full"><Upload className="w-6 h-6" /></Button></Link>
                       <Link to="/messages" onClick={handleMarkMessagesRead}>
                         <Button variant="ghost" size="icon" className="relative rounded-full">
-                          <MessageCircle className="w-5 h-5" />
+                          <MessageCircle className="w-6 h-6" />
                           {hasUnreadMessages && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />}
                         </Button>
                       </Link>
                       {/* Bell */}
                       <div className="relative" ref={notificationsRef}>
                         <Button variant="ghost" size="icon" className="relative rounded-full" onClick={() => setShowNotifications(p => !p)}>
-                          <Bell className="w-5 h-5" />
+                          <Bell className="w-6 h-6" />
                           {hasUnread && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse" />}
                         </Button>
                         {showNotifications && <NotificationsPopover onClose={() => setShowNotifications(false)} onNotificationsRead={checkAllUnreadStatus} />}
@@ -138,14 +146,14 @@ export default function Layout() {
                       {currentUser?.is_admin && (
                         <Link to="/admin">
                           <Button variant="ghost" size="icon" className="rounded-full" title="Admin Dashboard">
-                            <Shield className="w-5 h-5 text-purple-600" />
+                            <Shield className="w-6 h-6 text-purple-600" />
                           </Button>
                         </Link>
                       )}
                       {/* Profile avatar — desktop/tablet only */}
                       <div className="relative" ref={profileDropdownRef}>
                         <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShowProfileDropdown(p => !p)}>
-                          <img src={currentUser.avatar} alt="profile" className="w-8 h-8 rounded-full object-cover" />
+                          <img src={currentUser.avatar} alt="profile" className="w-10 h-10 rounded-full object-cover" />
                         </Button>
                         {showProfileDropdown && (
                           <ProfileDropdown

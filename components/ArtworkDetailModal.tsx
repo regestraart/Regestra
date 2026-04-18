@@ -375,19 +375,20 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, artist
               </div>
             ) : (
               <div className="animate-fade-in">
-                <div className="flex flex-col gap-2 mb-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                    <h2 className="text-base sm:text-xl font-black text-gray-900 leading-tight tracking-tight break-words max-w-[12ch] sm:max-w-none">{artwork.title}</h2>
-                    {isPlatformArtwork && (artwork as Artwork).isPriceVisible && (
-                        <div className="flex flex-col items-start sm:items-end gap-1 bg-purple-50 border border-purple-100 rounded-xl px-3 py-2 w-full sm:w-auto sm:min-w-[180px]">
-                            <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest whitespace-nowrap">Pricing</span>
-                            <span className="text-sm sm:text-base font-black text-purple-700 leading-tight whitespace-nowrap">
-                                {(artwork as Artwork).price !== null && (artwork as Artwork).price !== undefined 
-                                    ? `$${Number((artwork as Artwork).price).toLocaleString()}` 
-                                    : "Contact for Price"}
-                            </span>
-                        </div>
-                    )}
-                </div>
+                {/* Title — single line on all breakpoints */}
+                <h2 className="text-lg font-black text-gray-900 leading-tight tracking-tight whitespace-nowrap overflow-hidden text-ellipsis mb-2">{artwork.title}</h2>
+
+                {/* Pricing — sandwiched between title and artwork detail */}
+                {isPlatformArtwork && (artwork as Artwork).isPriceVisible && (
+                  <div className="flex items-center gap-2 mb-5">
+                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest">Pricing</span>
+                    <span className="text-sm font-black text-purple-700 leading-tight whitespace-nowrap">
+                      {(artwork as Artwork).price !== null && (artwork as Artwork).price !== undefined
+                        ? `$${Number((artwork as Artwork).price).toLocaleString()}`
+                        : "Contact for Price"}
+                    </span>
+                  </div>
+                )}
 
                 {!isPlatformArtwork && (
                     <p className="text-lg text-gray-600 mb-4 font-bold">

@@ -87,7 +87,8 @@ const NotificationsPopover = ({ onClose, onNotificationsRead }: NotificationsPop
               db.users.acceptRequest(notification.actorId, currentUser.id),
               db.notifications.delete(notification.id),
           ]);
-          refreshCurrentUser();
+          // Defer profile refresh — not blocking the UI
+          setTimeout(() => refreshCurrentUser(), 500);
       } catch (e: any) {
           console.error("Failed to accept request", e);
           alert(e.message || "Failed to accept connection request. Please check your database permissions.");
@@ -105,7 +106,8 @@ const NotificationsPopover = ({ onClose, onNotificationsRead }: NotificationsPop
               db.users.declineRequest(notification.actorId, currentUser.id),
               db.notifications.delete(notification.id),
           ]);
-          refreshCurrentUser();
+          // Defer profile refresh — not blocking the UI
+          setTimeout(() => refreshCurrentUser(), 500);
       } catch (e: any) {
           console.error("Failed to decline request", e);
           alert(e.message || "Failed to decline connection request.");

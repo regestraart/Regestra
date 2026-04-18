@@ -289,9 +289,8 @@ function ValueCards() {
         </FadeIn>
 
         {/* Cards grid — alignItems:stretch ensures equal height */}
-        <div style={{
+        <div className="rg-value-grid" style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
           gap: 18,
           alignItems: "stretch",
         }}>
@@ -573,7 +572,7 @@ function HowItWorks() {
           </div>
         </FadeIn>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 18, alignItems: "stretch" }}>
+        <div className="rg-how-grid" style={{ display: "grid", gap: 18, alignItems: "stretch" }}>
           {steps.map((s, i) => (
             <FadeIn key={s.num} delay={i * 80} style={{ display: "flex" }}>
               <div style={{
@@ -876,9 +875,34 @@ function GlobalStyles() {
         overflow-wrap: normal;
         word-break: normal;
       }
-      /* Mobile — ensure grids stack gracefully */
+      /* Mobile — stack to 1 column */
       @media (max-width: 640px) {
         .rg-landing section { overflow-x: hidden; }
+        .rg-how-grid,
+        .rg-value-grid {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+      }
+      /* Tablet — exactly 2 columns, equal width */
+      @media (min-width: 641px) and (max-width: 1023px) {
+        .rg-how-grid,
+        .rg-value-grid {
+          grid-template-columns: 1fr 1fr;
+          gap: 22px;
+        }
+        .rg-how-grid > *,
+        .rg-value-grid > * {
+          min-height: 220px;
+        }
+      }
+      /* Desktop — 4 columns */
+      @media (min-width: 1024px) {
+        .rg-how-grid,
+        .rg-value-grid {
+          grid-template-columns: repeat(4, 1fr);
+          gap: 18px;
+        }
       }
     `}</style>
   );

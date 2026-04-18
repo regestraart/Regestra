@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, CheckCircle, Loader2, ChevronRight, Lock, Upload, MessageCircle, Bell, ShoppingBag, Award, Shield } from 'lucide-react';
 import { certDb, Certificate } from '../services/certificates';
@@ -8,6 +8,7 @@ import { Button } from '../components/ui/Button';
 import { SearchComponent } from '../components/Search';
 import MobileNavFooter from '../components/MobileNavFooter';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import ProfileDropdown from '../components/ProfileDropdown';
 
 const P = '#7c3aed';
 const T = '#0d9488';
@@ -150,6 +151,18 @@ export default function CertExplorer() {
   const navigate = useNavigate();
   const isLoggedIn = !!currentUser;
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showMobileProfileDropdown, setShowMobileProfileDropdown] = useState(false);
+  const mobileProfileDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (mobileProfileDropdownRef.current && !mobileProfileDropdownRef.current.contains(e.target as Node)) {
+        setShowMobileProfileDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const handleSignOut = async () => { await setCurrentUser(null); navigate('/'); };
 
@@ -208,25 +221,25 @@ export default function CertExplorer() {
           style={{ borderBottom: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <Link to="/"><Logo className="h-7 w-auto" /></Link>
+            <div className="flex items-center justify-between h-20">
+              <Link to="/"><Logo className="h-9 w-auto" /></Link>
               {currentUser ? (
                 <>
                   {/* Desktop/tablet (md+): search + full nav icons */}
                   <div className="hidden md:flex items-center gap-6">
                     <div className="w-96 desktop-search-bar"><SearchComponent /></div>
                     <nav className="flex items-center gap-1">
-                      <Link to="/marketplace"><Button variant="ghost" size="icon" className="rounded-full"><ShoppingBag className="w-5 h-5" /></Button></Link>
-                      <Link to="/verify"><Button variant="ghost" size="icon" className="rounded-full" title="Verify Certificate"><Award className="w-5 h-5" /></Button></Link>
-                      <Link to="/upload"><Button variant="ghost" size="icon" className="rounded-full"><Upload className="w-5 h-5" /></Button></Link>
-                      <Link to="/messages"><Button variant="ghost" size="icon" className="rounded-full"><MessageCircle className="w-5 h-5" /></Button></Link>
-                      <Button variant="ghost" size="icon" className="rounded-full"><Bell className="w-5 h-5" /></Button>
+                      <Link to="/marketplace"><Button variant="ghost" size="icon" className="rounded-full"><ShoppingBag className="w-6 h-6" /></Button></Link>
+                      <Link to="/verify"><Button variant="ghost" size="icon" className="rounded-full" title="Verify Certificate"><Award className="w-6 h-6" /></Button></Link>
+                      <Link to="/upload"><Button variant="ghost" size="icon" className="rounded-full"><Upload className="w-6 h-6" /></Button></Link>
+                      <Link to="/messages"><Button variant="ghost" size="icon" className="rounded-full"><MessageCircle className="w-6 h-6" /></Button></Link>
+                      <Button variant="ghost" size="icon" className="rounded-full"><Bell className="w-6 h-6" /></Button>
                       {currentUser?.is_admin && (
-                        <Link to="/admin"><Button variant="ghost" size="icon" className="rounded-full" title="Admin Dashboard"><Shield className="w-5 h-5 text-purple-600" /></Button></Link>
+                        <Link to="/admin"><Button variant="ghost" size="icon" className="rounded-full" title="Admin Dashboard"><Shield className="w-6 h-6 text-purple-600" /></Button></Link>
                       )}
                       <Link to={`/profile/${currentUser.username}`}>
                         <Button variant="ghost" size="icon" className="rounded-full">
-                          <img src={currentUser.avatar} alt="profile" className="w-8 h-8 rounded-full object-cover" />
+                          <img src={currentUser.avatar} alt="profile" className="w-10 h-10 rounded-full object-cover" />
                         </Button>
                       </Link>
                     </nav>
@@ -235,12 +248,25 @@ export default function CertExplorer() {
                   <div className="flex md:hidden flex-1 items-center justify-center px-3">
                     <div style={{ flex: 1, maxWidth: 260 }}><SearchComponent /></div>
                   </div>
-                  {/* Mobile: bell only */}
-                  <div className="flex md:hidden items-center">
+                  {/* Mobile: bell + avatar */}
+                  <div className="flex md:hidden items-center gap-0.5">
                     <Button variant="ghost" size="icon" className="rounded-full"><Bell className="w-6 h-6" /></Button>
                     {currentUser?.is_admin && (
                       <Link to="/admin"><Button variant="ghost" size="icon" className="rounded-full" title="Admin Dashboard"><Shield className="w-6 h-6 text-purple-600" /></Button></Link>
                     )}
+                    <div className="relative" ref={mobileProfileDropdownRef}>
+                      <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShowMobileProfileDropdown(p => !p)}>
+                        <img src={currentUser.avatar} alt="profile" className="w-8 h-8 rounded-full object-cover" />
+                      </Button>
+                      {showMobileProfileDropdown && (
+                        <ProfileDropdown
+                          user={currentUser}
+                          onSignOut={handleSignOut}
+                          onNavigate={() => setShowMobileProfileDropdown(false)}
+                          onChangePasswordClick={() => { setShowMobileProfileDropdown(false); setShowChangePasswordModal(true); }}
+                        />
+                      )}
+                    </div>
                   </div>
                 </>
               ) : (

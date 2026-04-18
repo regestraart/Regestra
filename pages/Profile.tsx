@@ -65,39 +65,27 @@ const Profile = () => {
       const user = await db.users.getProfileByUsername(username);
       setProfileUser(user);
       setOptimisticFollowState(null);
-      // Set default tab based on role — art lovers see Collection first, artists see Artworks first
       setActiveTab(user?.role === 'artLover' ? 'collection' : 'artworks');
 
       if (user) {
-        const userArtworks = await db.artworks.getByArtist(user.id);
+        // Run all secondary fetches in parallel
+        const [userArtworks, profileData, followData, verificationReq] = await Promise.all([
+          db.artworks.getByArtist(user.id),
+          supabase.from('profiles').select('is_verified_artist').eq('id', user.id).maybeSingle(),
+          cu && cu.id !== user.id
+            ? supabase.from('follows').select('status')
+                .eq('follower_id', user.id).eq('following_id', cu.id).maybeSingle()
+            : Promise.resolve(null),
+          cu?.id === user.id
+            ? verificationDb.getMyRequest(user.id).catch(() => null)
+            : Promise.resolve(null),
+        ]);
+
         setArtworks(userArtworks);
-
-        // Load verification status from profiles table
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('is_verified_artist')
-          .eq('id', user.id)
-          .maybeSingle();
-        setIsVerifiedArtist(profileData?.is_verified_artist ?? false);
-
-        // If own profile, load verification request status
-        if (cu?.id === user.id) {
-          verificationDb.getMyRequest(user.id)
-            .then(req => setVerificationRequest(req))
-            .catch(() => {});
-        }
-
-        if (cu && cu.id !== user.id) {
-          const { data } = await supabase
-            .from('follows')
-            .select('status')
-            .eq('follower_id', user.id)
-            .eq('following_id', cu.id)
-            .maybeSingle();
-          
-          if (data && data.status === 'pending') {
-            setHasIncomingRequest(true);
-          }
+        setIsVerifiedArtist(profileData.data?.is_verified_artist ?? false);
+        if (verificationReq !== null) setVerificationRequest(verificationReq);
+        if (followData && (followData as any).data?.status === 'pending') {
+          setHasIncomingRequest(true);
         }
       }
     } catch (error: any) {
@@ -106,7 +94,7 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
-  }, [username]); // username-only dep — currentUser accessed via ref
+  }, [username]);
 
   useEffect(() => {
     loadProfile();
@@ -118,15 +106,8 @@ const Profile = () => {
   useEffect(() => {
     if (!username) return;
 
-    // We need the profile user's ID to filter realtime events
-    // Use a ref-like approach: capture profileUser.id from closure once loaded
-    let profileUserId: string | null = null;
-
-    const getProfileId = async () => {
-      const u = await db.users.getProfileByUsername(username).catch(() => null);
-      profileUserId = u?.id ?? null;
-    };
-    getProfileId();
+    // Use profileUser from state (already loaded) — avoid a redundant DB call
+    const profileUserId = profileUser?.id ?? null;
 
     const channel = supabase
       .channel(`profile-realtime-${username}`)
@@ -137,22 +118,24 @@ const Profile = () => {
         table: 'artworks',
         filter: profileUserId ? `artist_id=eq.${profileUserId}` : undefined,
       }, () => { loadProfile(); })
-      // Follow changes (connections count)
+      // Follow changes scoped to this user only (follower or following)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'follows',
+        filter: profileUserId ? `following_id=eq.${profileUserId}` : undefined,
       }, () => { loadProfile(); })
-      // Profile row changes (bio, avatar, etc.)
+      // Profile row changes scoped to this user
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
         table: 'profiles',
+        filter: profileUserId ? `id=eq.${profileUserId}` : undefined,
       }, () => { loadProfile(); })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [username, loadProfile]);
+  }, [username, loadProfile, profileUser?.id]);
 
   const isFollowing = optimisticFollowState !== null
     ? optimisticFollowState === 'following'

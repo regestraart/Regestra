@@ -447,12 +447,12 @@ export default function ArtworkView({ type }: ArtworkViewProps) {
                         </div>
                     ) : (
                         <div className="space-y-6 animate-fade-in">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                                <h2 className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tighter leading-[0.92] break-words max-w-[10ch] sm:max-w-none">{artwork.title}</h2>
+                            <div className="flex flex-col gap-2">
+                                <h2 className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tighter leading-[0.92] whitespace-nowrap overflow-hidden text-ellipsis">{artwork.title}</h2>
                                 {isPlatformArtwork && (artwork as Artwork).isPriceVisible && (
-                                    <div className="flex flex-col items-start sm:items-end shrink-0 self-start sm:self-auto">
+                                    <div className="flex flex-col items-start">
                                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Pricing</span>
-                                        <span className="text-lg sm:text-2xl font-black text-purple-700 leading-tight whitespace-nowrap">
+                                        <span className="text-lg sm:text-2xl font-black text-purple-700 leading-tight">
                                             {(artwork as Artwork).price !== null && (artwork as Artwork).price !== undefined 
                                                 ? `$${Number((artwork as Artwork).price).toLocaleString()}` 
                                                 : "Contact for Price"}

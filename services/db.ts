@@ -45,6 +45,9 @@ import {
   conversations as mockConversations
 } from '../data/mock';
 
+// Module-level cache for the regestra account ID — never changes, no need to re-fetch
+let _regestraIdCache: string | null = null;
+
 const getErrorMessage = (err: any): string => {
     if (!err) return "An unknown database error occurred.";
     if (typeof err === 'string') return err;
@@ -384,7 +387,7 @@ export const db = {
     },
     async getById(id: string): Promise<Artwork | null> {
         if (!isSupabaseConfigured) return mockArtworks.find(a => a.id === id) || null;
-        const { data, error } = await supabase.from('artworks').select('*, profiles(*)').eq('id', id).maybeSingle();
+        const { data, error } = await supabase.from('artworks').select('*, profiles(id, full_name, username, avatar_url)').eq('id', id).maybeSingle();
         if (error) throw new Error(getErrorMessage(error));
         if (!data) return null;
         return {
@@ -626,20 +629,25 @@ export const db = {
             }).filter(p => userId ? (!getHiddenPostIds(userId).has(p.id) && !getDeletedPostIds(userId).has(p.id)) : true);
         }
 
-        // Fetch Regestra's ID for consistent feed inclusion
-        const { data: regUser } = await supabase.from('profiles').select('id').eq('username', 'regestra').maybeSingle();
-        const regId = regUser?.id;
+        // Parallelise: fetch regestra ID (cached after first call) + follows list simultaneously
+        const [regResult, followsResult] = await Promise.all([
+            _regestraIdCache
+                ? Promise.resolve({ data: { id: _regestraIdCache } })
+                : supabase.from('profiles').select('id').eq('username', 'regestra').maybeSingle(),
+            userId
+                ? supabase.from('follows').select('following_id').eq('follower_id', userId).eq('status', 'accepted')
+                : Promise.resolve({ data: [] }),
+        ]);
+
+        const regId: string | undefined = (regResult as any).data?.id;
+        if (regId) _regestraIdCache = regId;
 
         const allowedAuthorIds: string[] = [];
         if (userId) {
             allowedAuthorIds.push(userId);
-            const { data: follows } = await supabase.from('follows')
-                .select('following_id')
-                .eq('follower_id', userId)
-                .eq('status', 'accepted');
-            if (follows) allowedAuthorIds.push(...follows.map(f => f.following_id));
+            const follows = (followsResult as any).data;
+            if (follows) allowedAuthorIds.push(...follows.map((f: any) => f.following_id));
         }
-        
         if (regId && !allowedAuthorIds.includes(regId)) {
             allowedAuthorIds.push(regId);
         }

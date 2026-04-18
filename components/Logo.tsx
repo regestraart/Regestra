@@ -11,7 +11,7 @@ const Logo: React.FC<LogoProps> = ({ className }) => {
       style={{
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         fontWeight: 800,
-        fontSize: '1.35rem',
+        fontSize: '1.6rem',
         letterSpacing: '-0.03em',
         background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 60%, #0d9488 100%)',
         WebkitBackgroundClip: 'text',

@@ -259,8 +259,8 @@ export default function UploadArtwork() {
         .upload-page { min-height: 100vh; background: linear-gradient(135deg, #faf5ff 0%, #f0fdf4 100%); padding: clamp(16px, 4vw, 32px) clamp(12px, 4vw, 16px) 80px; }
         .upload-container { max-width: 680px; margin: 0 auto; }
         .upload-card { background: #fff; border-radius: 28px; padding: clamp(20px, 5vw, 36px); box-shadow: 0 4px 32px rgba(124,58,237,0.08); border: 1px solid #f3f0ff; }
-        .cert-toggle-row { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #faf5ff, #f0fdf4); border: 1.5px solid #ede9fe; border-radius: 16px; padding: 16px 18px; }
-        .cert-toggle-icon { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #7c3aed, #0d9488); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .cert-toggle-row { display: flex; flex-direction: column; gap: 10px; background: linear-gradient(135deg, #faf5ff, #f0fdf4); border: 1.5px solid #ede9fe; border-radius: 16px; padding: 14px 14px; }
+        .cert-toggle-icon { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg, #7c3aed, #0d9488); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .toggle-sw { width: 48px; height: 26px; border-radius: 99px; border: none; cursor: pointer; position: relative; transition: background 200ms; flex-shrink: 0; }
         .toggle-sw.on { background: linear-gradient(135deg, #7c3aed, #0d9488); }
         .toggle-sw.off { background: #e5e7eb; }
@@ -480,44 +480,52 @@ export default function UploadArtwork() {
 
               {/* Pricing */}
               {(isArtist || formData.listedForSale) && (
-                <div className="space-y-4 bg-purple-50/30 p-6 rounded-3xl border border-purple-100/50">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                      <Label className="text-[12px] font-black text-purple-700 uppercase tracking-widest">
-                        Public Pricing {isSeller && <span className="text-red-400 ml-1">* Required</span>}
-                      </Label>
+                <div className="space-y-4 bg-purple-50/30 p-5 rounded-3xl border border-purple-100/50">
+                  <div className="flex items-center justify-between">
+                    {/* Left: label */}
+                    <div className="flex items-center gap-1.5">
+                      <DollarSign className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
+                      <span className="text-[11px] font-black text-purple-600 uppercase tracking-widest leading-none">
+                        Public Pricing
+                      </span>
+                      {isSeller && <span className="text-[10px] font-bold text-red-400 ml-0.5">*</span>}
                     </div>
-                    <div className="flex items-center gap-2">
+                    {/* Right: toggle + visible/hidden label stacked below */}
+                    <div className="flex flex-col items-end gap-1">
                       {priceToggleLocked ? (
-                        <span className="text-[11px] font-black text-green-600 flex items-center gap-1 uppercase tracking-widest">
-                          <Eye className="w-3 h-3" /> Visible <Lock className="w-3 h-3 ml-1 text-purple-400" />
-                        </span>
+                        <>
+                          <div className="w-11 h-6 rounded-full bg-purple-600 relative flex-shrink-0 opacity-60 cursor-not-allowed">
+                            <div className="absolute top-1 left-6 w-4 h-4 bg-white rounded-full shadow-sm" />
+                          </div>
+                          <span className="text-[10px] font-bold text-green-600 flex items-center gap-0.5 uppercase tracking-wide">
+                            <Eye className="w-2.5 h-2.5" /> Visible <Lock className="w-2.5 h-2.5 ml-0.5 text-purple-400" />
+                          </span>
+                        </>
                       ) : (
                         <>
-                          <span className="text-[11px] font-black uppercase tracking-widest">
-                            {formData.isPriceVisible
-                              ? <span className="text-green-600 flex items-center gap-1"><Eye className="w-3 h-3" /> Visible</span>
-                              : <span className="text-gray-400 flex items-center gap-1"><EyeOff className="w-3 h-3" /> Hidden</span>}
-                          </span>
                           <button type="button" onClick={handleToggleVisibility}
-                            className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${formData.isPriceVisible ? 'bg-purple-600' : 'bg-gray-200'}`}>
-                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${formData.isPriceVisible ? 'left-7' : 'left-1'}`} />
+                            className={`w-11 h-6 rounded-full transition-all relative flex-shrink-0 ${formData.isPriceVisible ? 'bg-purple-600' : 'bg-gray-300'}`}>
+                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${formData.isPriceVisible ? 'left-6' : 'left-1'}`} />
                           </button>
+                          <span className={`text-[10px] font-bold flex items-center gap-0.5 uppercase tracking-wide ${formData.isPriceVisible ? 'text-green-600' : 'text-gray-400'}`}>
+                            {formData.isPriceVisible
+                              ? <><Eye className="w-2.5 h-2.5" /> Visible</>
+                              : <><EyeOff className="w-2.5 h-2.5" /> Hidden</>}
+                          </span>
                         </>
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 items-stretch">
                     <div className="relative flex-1">
-                      <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                       <Input id="price" name="price" type="number" min={isSeller ? '0.01' : '0'} step="0.01"
                         value={formData.price} onChange={handleChange} placeholder="0.00"
-                        className="rounded-2xl h-11 sm:h-14 pl-10 border-purple-100 focus:ring-purple-500 text-base sm:text-lg font-bold shadow-sm" />
+                        className="rounded-2xl h-12 pl-9 border-purple-100 focus:ring-purple-500 text-base font-bold shadow-sm w-full" />
                     </div>
                     <Button type="button" variant="ghost" onClick={handleSuggestPrice} disabled={isSuggestingPrice || !previewUrl}
-                      className="rounded-2xl h-14 px-5 border border-purple-100 bg-white hover:bg-purple-50 text-purple-600 font-bold transition-all shadow-sm">
-                      {isSuggestingPrice ? <RefreshCw className="w-5 h-5 animate-spin" /> : <><Sparkles className="w-5 h-5 mr-2" /><span className="hidden sm:inline">AI Suggest</span></>}
+                      className="rounded-2xl h-12 px-4 border border-purple-100 bg-white hover:bg-purple-50 text-purple-600 font-bold transition-all shadow-sm flex items-center gap-2 whitespace-nowrap flex-shrink-0">
+                      {isSuggestingPrice ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /><span className="text-sm">AI Suggest</span></>}
                     </Button>
                   </div>
                 </div>
@@ -526,35 +534,36 @@ export default function UploadArtwork() {
               {/* Certificate of Authenticity toggle — artists only */}
               {isArtist && (
                 <div className="cert-toggle-row">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {/* Top row: icon + full title */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div className="cert-toggle-icon">
-                      <Award size={18} color="#fff" />
+                      <Award size={15} color="#fff" />
                     </div>
-                    <div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1a1729' }}>
-                        Certificate of Authenticity
-                      </div>
-                      {canIssueCerts ? (
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
-                          Issue a verifiable certificate after publishing
-                          {tier === 'pro' ? ' · Solana anchored' : ' · SHA-256 secured'}
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '0.72rem', color: '#7c3aed', fontWeight: 600, marginTop: 2 }}>
-                          Requires Creator or Pro plan · <a href="/subscription" style={{ textDecoration: 'underline' }}>Upgrade</a>
-                        </div>
-                      )}
+                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1a1729', letterSpacing: '-0.01em' }}>
+                      Certificate of Authenticity
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    disabled={!canIssueCerts}
-                    onClick={() => canIssueCerts && setFormData(prev => ({ ...prev, wantsCertificate: !prev.wantsCertificate }))}
-                    className={`toggle-sw ${formData.wantsCertificate && canIssueCerts ? 'on' : 'off'}`}
-                    style={{ opacity: canIssueCerts ? 1 : 0.4, cursor: canIssueCerts ? 'pointer' : 'not-allowed' }}
-                  >
-                    <div className={`toggle-th ${formData.wantsCertificate && canIssueCerts ? 'on' : 'off'}`} />
-                  </button>
+                  {/* Bottom row: subtitle on left, toggle on right */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 42 }}>
+                    {canIssueCerts ? (
+                      <div style={{ fontSize: '0.68rem', color: '#6b7280' }}>
+                        {tier === 'pro' ? 'Solana anchored · issued after publishing' : 'SHA-256 secured · issued after publishing'}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 600 }}>
+                        Requires Creator or Pro · <a href="/subscription" style={{ textDecoration: 'underline' }}>Upgrade</a>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      disabled={!canIssueCerts}
+                      onClick={() => canIssueCerts && setFormData(prev => ({ ...prev, wantsCertificate: !prev.wantsCertificate }))}
+                      className={`toggle-sw ${formData.wantsCertificate && canIssueCerts ? 'on' : 'off'}`}
+                      style={{ opacity: canIssueCerts ? 1 : 0.4, cursor: canIssueCerts ? 'pointer' : 'not-allowed', flexShrink: 0, marginLeft: 12 }}
+                    >
+                      <div className={`toggle-th ${formData.wantsCertificate && canIssueCerts ? 'on' : 'off'}`} />
+                    </button>
+                  </div>
                 </div>
               )}
 

@@ -43,7 +43,7 @@ const Button: React.FC<ButtonProps> = ({
     default: 'h-10 py-2 px-4 text-sm',
     sm:      'h-9 px-3 text-xs',
     lg:      'h-11 px-8 text-base',
-    icon:    'h-10 w-10',
+    icon:    'h-11 w-11',
     xl:      'h-auto px-8 py-4 text-lg',
   };
 

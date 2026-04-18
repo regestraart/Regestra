@@ -71,11 +71,12 @@ export default function Gallery() {
         // 1. All visible platform artworks (profile_visible = true enforced in getAll)
         const artistArtworks = await db.artworks.getAll(100);
 
-        // 2. All users' collections — pull from profiles table
+        // 2. All users' collections — pull from profiles table (limit to 200 most recent active profiles)
         const { data: allProfiles } = await supabase
           .from("profiles")
           .select("collections")
-          .not("collections", "is", null);
+          .not("collections", "is", null)
+          .limit(200);
 
         const allCollectionItems: CollectionArtwork[] = (allProfiles || [])
           .flatMap(p => {
