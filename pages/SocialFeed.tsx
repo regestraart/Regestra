@@ -10,6 +10,7 @@ import { createUrl } from '../utils';
 import { SocialPost, SocialComment, DEFAULT_AVATAR_URL } from '../data/mock';
 import { SearchComponent } from '../components/Search';
 import { Input } from '../components/ui/Input';
+import ImageLightbox from '../components/ImageLightbox';
 
 const getDomain = (url: string) => {
     if (!url) return 'ARTICLE';
@@ -90,6 +91,7 @@ export default function SocialFeed() {
   const [hiddenPosts, setHiddenPosts] = useState<SocialPost[]>([]);
   const [showHiddenSection, setShowHiddenSection] = useState(false);
   const [loadingHidden, setLoadingHidden] = useState(false);
+  const [lightbox, setLightbox] = useState<{ src: string; alt?: string } | null>(null);
 
   const metadataAbortController = useRef<AbortController | null>(null);
   const fetcherTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -653,7 +655,14 @@ SELECT 'Repair V14 Applied! Now use the "Project Reload" button in the app.' as 
                         )}
                     </div>
                 ) : null}
-                {post.image && !hiddenPostIds.has(post.id) && <img src={post.image} alt="Post content" className="mt-4 rounded-xl border border-gray-100 w-full max-h-[550px] object-cover shadow-sm" />}
+                {post.image && !hiddenPostIds.has(post.id) && (
+                  <img
+                    src={post.image}
+                    alt="Post content"
+                    className="mt-4 rounded-xl border border-gray-100 w-full max-h-[550px] object-cover shadow-sm cursor-zoom-in hover:brightness-95 transition-all"
+                    onClick={() => setLightbox({ src: post.image!, alt: post.content || 'Artwork' })}
+                  />
+                )}
                 
                 {/* Article Preview — hidden when post is hidden */}
                 {!hiddenPostIds.has(post.id) && <ArticleCard post={post} />}
@@ -802,6 +811,17 @@ SELECT 'Repair V14 Applied! Now use the "Project Reload" button in the app.' as 
             <p className="text-sm font-medium">{toast.message}</p>
             <button onClick={() => setToast(null)} className="p-1 -mr-1 text-gray-400 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
           </div>
+        )}
+
+        {/* Full-screen image lightbox */}
+        {lightbox && (
+          <ImageLightbox
+            src={lightbox.src}
+            alt={lightbox.alt}
+            authorUsername={lightbox.authorUsername}
+            authorAvatar={lightbox.authorAvatar}
+            onClose={() => setLightbox(null)}
+          />
         )}
     </div>
   );
